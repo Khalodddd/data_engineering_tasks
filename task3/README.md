@@ -1,4 +1,3 @@
-```markdown
 # Task 3 – Web Method (LCM Calculator)
 
 This project implements an HTTP GET web method using **Python (Flask)** that accepts two natural numbers `x` and `y`, and returns their **lowest common multiple** (LCM).
@@ -64,20 +63,100 @@ The endpoint uses your email with **`@` and `.` replaced by `_`**:
 
 ---
 
-## ❗ Important Notes
-- Only **digits** should be returned (no spaces, no newlines).
-- Supports **large integers correctly** (beyond JavaScript limits).
-- If invalid input → returns `NaN`.
-- Development server only (Flask).
-- Required for **submission to bot** using format:  
-  ```
-  !task3 your_email http://your_deployed_url?x={}&y={}
-  ```
+## 💻 Source Code (excerpt)
+
+```python
+from flask import Flask, request
+
+app = Flask(__name__)
+
+@app.route('/khaledsoliman1599_gmail_com')
+def lcm():
+    try:
+        x = int(request.args.get("x"))
+        y = int(request.args.get("y"))
+        if x < 0 or y < 0:
+            return "NaN"
+        # LCM calculation
+        import math
+        return str(abs(x * y) // math.gcd(x, y))
+    except:
+        return "NaN"
+
+if __name__ == "__main__":
+    app.run()
+```
+
+---
+
+## 📦 Dependencies
+
+```
+Flask==3.0.3
+```
+
+---
+
+## 🚀 Deployment Details
+
+The API was successfully deployed using **PythonAnywhere**.
+
+| Configuration | Value |
+|---------------|--------|
+| Hosting Platform | PythonAnywhere |
+| Python Version (Local) | 3.13.3 |
+| PythonAnywhere Version | 3.12 (Flask 3.0.3) |
+| WSGI File Path | `/home/KhaledSoliman/mysite/flask_app.py` |
+| Deployment URL |
+```
+https://khaledsoliman.pythonanywhere.com/khaledsoliman1599_gmail_com?x={}&y={}
+```
+
+---
+
+## 🧪 Live Testing
+
+| Request | Output |
+|--------|--------|
+| https://khaledsoliman.pythonanywhere.com/khaledsoliman1599_gmail_com?x=12&y=18 | `36` |
+
+---
+
+## 📤 Submission
+
+Submitted via Discord bot using:
+
+```
+!task3 khaledsoliman1599@gmail.com https://khaledsoliman.pythonanywhere.com/khaledsoliman1599_gmail_com?x={}&y={}
+```
+
+### 🟢 Submission Status
+
+✔ **The solution for Task 3 was accepted.**  
+Assigned to: **khaledsoliman1599@gmail.com**
+
+---
+
+## 📎 Repository
+
+The implementation is available at:
+
+🔗 https://github.com/Khalodddd/data_engineering_tasks/tree/main/task3
+
+---
+
+## 📝 Notes
+
+- The API correctly calculates LCM and handles invalid inputs.
+- Returns results as plain numeric text (required format).
+- Fully deployed online and validated.
+- No additional files are included beyond what is necessary.
 
 ---
 
 ## 👤 Author
 
 **Khaled Soliman**  
-`khaledsoliman1599@gmail.com`
-```
+📧 `khaledsoliman1599@gmail.com`
+
+🎯 *Task 3 completed successfully*
