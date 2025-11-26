@@ -1,0 +1,27 @@
+# ------------------------
+# Ignore Task 2 data files
+# ------------------------
+task2/*.zip
+task2/task2data/
+# Ignore task2 exact zip file
+task2/task2.zip
+
+# ------------------------
+# Ignore Task 3 virtual environment
+# ------------------------
+task3/venv/
+
+# ------------------------
+# General Python ignore
+# ------------------------
+__pycache__/
+*.pyc
+
+# ------------------------
+# Other unwanted files
+# ------------------------
+.DS_Store
+.vscode/
+.idea/
+*.log
+*.env
