@@ -1,8 +1,9 @@
-# Bookstore Analytics Dashboard
+# 📊 Bookstore Analytics Streamlit Website
 
-![Dashboard Screenshot](dashboard.jpeg)
+![Streamlit Website Screenshot](web.jpeg)
 
-A comprehensive Streamlit application for processing and analyzing bookstore sales data across multiple datasets. Provides business intelligence through interactive visualizations and comparative analytics.
+A comprehensive Streamlit application for processing and analyzing bookstore sales data across multiple datasets.  
+Provides business intelligence through interactive visualizations and comparative analytics.
 
 ---
 
@@ -20,10 +21,10 @@ A comprehensive Streamlit application for processing and analyzing bookstore sal
 
 ```
 bookstore-analytics/
-├── dashboard.py          # Main Streamlit dashboard
+├── app_streamlit.py          # Main Streamlit dashboard
 ├── process_data.py       # Data processing logic
 ├── requirements.txt      # Dependencies
-├── dashboard.jpeg        # Dashboard screenshot
+├── web.jpeg        # Dashboard screenshot
 └── output/               # Generated dataset outputs
 ```
 
@@ -44,7 +45,7 @@ python process_data.py
 
 ### 3️⃣ Launch Dashboard
 ```bash
-streamlit run dashboard.py
+streamlit run app_streamlit.py
 ```
 
 👉 Open in browser: **http://localhost:8501**
