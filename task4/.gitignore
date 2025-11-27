@@ -1,0 +1,24 @@
+# Create .gitignore if not exists
+echo "__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+.env
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+output/
+*.parquet
+*.csv
+*.yaml
+*.json
+!requirements.txt
+" > .gitignore
