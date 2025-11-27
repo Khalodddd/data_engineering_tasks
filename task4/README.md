@@ -1,0 +1,127 @@
+# Bookstore Analytics Dashboard
+
+![Dashboard Screenshot](dashboard.jpeg)
+
+A comprehensive Streamlit application for processing and analyzing bookstore sales data across multiple datasets. Provides business intelligence through interactive visualizations and comparative analytics.
+
+---
+
+## 🚀 Features
+
+- **Multi-Dataset Comparison**: Analyze DATA1, DATA2, and DATA3 side-by-side  
+- **Revenue Analytics**: Authors ranked by *revenue*, not frequency  
+- **Interactive Visualizations**: Built with Plotly  
+- **Customer Insights**: Top customers & spending trends  
+- **Full BI Reporting**: Actionable performance metrics
+
+---
+
+## 📁 Project Structure
+
+```
+bookstore-analytics/
+├── dashboard.py          # Main Streamlit dashboard
+├── process_data.py       # Data processing logic
+├── requirements.txt      # Dependencies
+├── dashboard.jpeg        # Dashboard screenshot
+└── output/               # Generated dataset outputs
+```
+
+---
+
+## 🔧 Installation & Setup
+
+### 1️⃣ Install dependencies
+```bash
+pip install -r requirements.txt
+```
+
+### 2️⃣ Process raw datasets  
+⚠ Ensure `orders.parquet`, `books.yaml`, and `users.csv` are in the **project root folder**
+```bash
+python process_data.py
+```
+
+### 3️⃣ Launch Dashboard
+```bash
+streamlit run dashboard.py
+```
+
+👉 Open in browser: **http://localhost:8501**
+
+---
+
+## 📊 Dataset Processing
+
+The `process_data.py` script analyzes:
+
+| File | Purpose |
+|------|---------|
+| `orders.parquet` | Transaction history |
+| `books.yaml` | Book metadata (authors, pricing) |
+| `users.csv` | Customer info |
+
+It generates:
+- 🧾 `*_summary.json` → Key metrics per dataset  
+- 📈 `*_daily_revenue.csv` → Daily revenue analytics  
+
+---
+
+## 📈 Dashboard Insights
+
+| Metric | Description |
+|--------|-------------|
+| 💵 Total Revenue | Total earnings |
+| 📆 Best Revenue Days | Top-performing dates |
+| 💳 Top Customer | Highest spender |
+| 📚 Unique Author Sets | Distinct author combinations |
+| 🏆 Top Author | Most revenue generated |
+| 🔍 Dataset Comparison | Full BI cross-analysis |
+
+---
+
+## 🛠️ Tech Stack
+
+- Python 3.8+
+- Streamlit
+- Plotly
+- Pandas
+- PyYAML
+
+---
+
+## 📦 requirements.txt
+
+```
+streamlit
+pandas
+plotly
+pyyaml
+```
+
+---
+
+## ✨ Author & Credits
+
+**Your Name**  
+🔗 GitHub: [YOUR_GITHUB_PROFILE_URL]  
+📧 Email: [YOUR_EMAIL]
+
+---
+
+## 📄 License
+
+This project is for **educational and evaluation purposes only.**
+
+---
+
+## 📌 Final Notes
+
+- Replace placeholders (`YOUR_GITHUB_REPOSITORY_URL`, `YOUR_EMAIL`, etc.)
+- Add screenshot using:
+
+```bash
+git add README.md dashboard.jpeg
+git commit -m "Added README and dashboard screenshot"
+git push
+```
