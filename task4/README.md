@@ -118,11 +118,6 @@ This project is for **educational and evaluation purposes only.**
 
 ## 📌 Final Notes
 
-- Replace placeholders (`YOUR_GITHUB_REPOSITORY_URL`, `YOUR_EMAIL`, etc.)
-- Add screenshot using:
+- Replace placeholders (`https://github.com/Khalodddd/data_engineering_tasks/tree/main/task4`, `khaledsoliman1599@gmail.com`)
 
-```bash
-git add README.md dashboard.jpeg
-git commit -m "Added README and dashboard screenshot"
-git push
-```
+
