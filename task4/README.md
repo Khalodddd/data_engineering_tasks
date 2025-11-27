@@ -105,8 +105,8 @@ pyyaml
 ## ✨ Author & Credits
 
 **Your Name**  
-🔗 GitHub: [YOUR_GITHUB_PROFILE_URL]  
-📧 Email: [YOUR_EMAIL]
+🔗 GitHub: https://github.com/Khalodddd/data_engineering_tasks/tree/main/task4 
+📧 Email: khaledsoliman1599@gmail.com
 
 ---
 
@@ -115,9 +115,5 @@ pyyaml
 This project is for **educational and evaluation purposes only.**
 
 ---
-
-## 📌 Final Notes
-
-- Replace placeholders (`https://github.com/Khalodddd/data_engineering_tasks/tree/main/task4`, `khaledsoliman1599@gmail.com`)
 
 
