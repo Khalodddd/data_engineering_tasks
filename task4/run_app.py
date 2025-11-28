@@ -1,60 +1,89 @@
 import os
 import subprocess
-import streamlit as st
 import sys
 
-def install_requirements():
-    """Install requirements if needed"""
-    try:
-        import pandas
-        return True
-    except ImportError:
-        st.info("📦 Installing required packages...")
-        result = subprocess.run([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"], 
-                              capture_output=True, text=True)
-        if result.returncode == 0:
-            st.success("✅ Packages installed successfully!")
-            return True
-        else:
-            st.error(f"❌ Package installation failed: {result.stderr}")
-            return False
+def check_and_install_dependencies():
+    """Check if all required packages are installed"""
+    required_packages = ['pandas', 'plotly', 'pyyaml', 'pyarrow']
+    missing_packages = []
+    
+    for package in required_packages:
+        try:
+            __import__(package)
+            print(f"✅ {package} is installed")
+        except ImportError:
+            print(f"❌ {package} is missing")
+            missing_packages.append(package)
+    
+    if missing_packages:
+        print(f"📦 Installing missing packages: {missing_packages}")
+        result = subprocess.run([
+            sys.executable, "-m", "pip", "install"
+        ] + missing_packages)
+        return result.returncode == 0
+    return True
+
+def process_data():
+    """Run the data processing script"""
+    print("🔄 Processing data...")
+    
+    # Try different possible paths for process_data.py
+    possible_paths = [
+        "process_data.py",
+        "./process_data.py",
+        "/mount/src/data_engineering_tasks/task4/process_data.py"
+    ]
+    
+    for path in possible_paths:
+        if os.path.exists(path):
+            print(f"✅ Found process_data.py at: {path}")
+            result = subprocess.run([sys.executable, path], capture_output=True, text=True)
+            if result.returncode == 0:
+                print("✅ Data processed successfully!")
+                return True
+            else:
+                print(f"❌ Data processing failed: {result.stderr}")
+                return False
+    
+    print("❌ Could not find process_data.py")
+    return False
 
 def main():
-    st.set_page_config(page_title="Bookstore Analytics", layout="wide")
+    print("=" * 50)
+    print("🚀 Bookstore Analytics - Setup & Launch")
+    print("=" * 50)
     
-    # First, install requirements
-    if not install_requirements():
+    # Step 1: Check dependencies
+    if not check_and_install_dependencies():
+        print("❌ Failed to install dependencies")
         return
     
-    # Then process data if needed
+    # Step 2: Process data if output doesn't exist
     if not os.path.exists("./output"):
-        st.info("🔄 Processing data for the first time...")
-        
-        process_file = "/mount/src/data_engineering_tasks/task4/process_data.py"
-        
-        if os.path.exists(process_file):
-            result = subprocess.run(["python", process_file], capture_output=True, text=True)
-            if result.returncode == 0:
-                st.success("✅ Data processed successfully! Starting dashboard...")
-                st.rerun()
-            else:
-                st.error(f"❌ Data processing failed: {result.stderr}")
-                # Show what packages are available
-                st.write("Checking available packages...")
-                subprocess.run(["pip", "list"])
-        else:
-            st.error("❌ Could not find process_data.py file!")
+        if not process_data():
+            print("❌ Data processing failed, cannot continue")
+            return
+    else:
+        print("✅ Output data already exists")
+    
+    # Step 3: Launch the dashboard
+    print("🎯 Launching dashboard...")
+    
+    # Try different possible paths for app_streamlit.py
+    possible_app_paths = [
+        "app_streamlit.py",
+        "./app_streamlit.py", 
+        "/mount/src/data_engineering_tasks/task4/app_streamlit.py"
+    ]
+    
+    for path in possible_app_paths:
+        if os.path.exists(path):
+            print(f"✅ Found app_streamlit.py at: {path}")
+            print("🌐 Starting Streamlit server...")
+            subprocess.run(["streamlit", "run", path, "--server.port=8501", "--server.address=0.0.0.0"])
             return
     
-    # Now run the Streamlit app
-    st.info("🚀 Starting dashboard...")
-    
-    app_file = "/mount/src/data_engineering_tasks/task4/app_streamlit.py"
-    
-    if os.path.exists(app_file):
-        subprocess.run(["streamlit", "run", app_file])
-    else:
-        st.error("❌ Could not find app_streamlit.py file!")
+    print("❌ Could not find app_streamlit.py")
 
 if __name__ == "__main__":
     main()

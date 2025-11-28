@@ -4,17 +4,10 @@ import json
 import math
 import pandas as pd
 from collections import defaultdict
-
-# Try to import visualization packages
-try:
-    import streamlit as st
-    import plotly.express as px
-    import plotly.graph_objects as go
-    import yaml
-    HAS_VISUALIZATION = True
-except ImportError as e:
-    print(f"Missing visualization packages: {e}")
-    HAS_VISUALIZATION = False
+import streamlit as st
+import plotly.express as px
+import plotly.graph_objects as go
+import yaml
 
 class DataProcessor:
     def __init__(self, eur_rate=1.2):
@@ -31,11 +24,6 @@ class DataProcessor:
                 raise ImportError("Reading parquet files requires pyarrow. Please install: pip install pyarrow")
     
     def read_yaml_list(self, path):
-        try:
-            import yaml
-        except ImportError:
-            raise ImportError("Please install PyYAML: pip install pyyaml")
-            
         with open(path, "r", encoding="utf-8") as f:
             obj = yaml.safe_load(f)
         if isinstance(obj, list):
@@ -47,6 +35,85 @@ class DataProcessor:
             if all(isinstance(v, dict) for v in vals):
                 return vals
         return []
+
+    def create_sample_data(self, data_dir):
+        """Create sample data for deployment"""
+        os.makedirs(data_dir, exist_ok=True)
+        
+        # Create sample datasets
+        for dataset in ["DATA1", "DATA2", "DATA3"]:
+            dataset_dir = os.path.join(data_dir, dataset)
+            os.makedirs(dataset_dir, exist_ok=True)
+            
+            # Sample users data
+            users_data = f"""user_id,name,email,phone,address
+1,John Doe,john.doe@email.com,555-0101,123 Main St
+2,Jane Smith,jane.smith@email.com,555-0102,456 Oak Ave
+3,Robert Johnson,robert.j@email.com,555-0103,789 Pine Rd
+4,Emily Davis,emily.davis@email.com,555-0104,321 Elm St
+5,Michael Wilson,mike.wilson@email.com,555-0105,654 Maple Dr
+6,Sarah Brown,sarah.b@email.com,555-0106,987 Cedar Ln
+7,David Lee,david.lee@email.com,555-0107,147 Birch St
+8,Lisa Garcia,lisa.g@email.com,555-0108,258 Walnut Ave
+9,James Miller,james.m@email.com,555-0109,369 Spruce Rd
+10,Maria Lopez,maria.lopez@email.com,555-0110,741 Willow Ln"""
+            
+            with open(os.path.join(dataset_dir, 'users.csv'), 'w') as f:
+                f.write(users_data)
+            
+            # Sample orders data
+            import numpy as np
+            np.random.seed(42)  # For consistent results
+            
+            dates = pd.date_range('2024-01-01', '2024-03-31', freq='D')
+            orders_data = []
+            
+            for i in range(200):  # Create 200 sample orders
+                order_date = np.random.choice(dates)
+                user_id = np.random.randint(1, 11)
+                book_id = f"B{np.random.randint(100, 130):03d}"
+                quantity = np.random.randint(1, 4)
+                price = np.random.choice([9.99, 14.99, 19.99, 24.99, 29.99])
+                
+                orders_data.append({
+                    'user_id': str(user_id),
+                    'book_id': book_id,
+                    'quantity': quantity,
+                    'unit_price': f"${price:.2f}",
+                    'timestamp_raw': order_date.strftime('%Y-%m-%d %H:%M:%S')
+                })
+            
+            df_orders = pd.DataFrame(orders_data)
+            df_orders.to_parquet(os.path.join(dataset_dir, 'orders.parquet'), index=False)
+            
+            # Sample books data
+            books_data = []
+            authors = [
+                "J.K. Rowling", "Stephen King", "George R.R. Martin", "Agatha Christie",
+                "James Patterson", "Dan Brown", "John Grisham", "Stephenie Meyer",
+                "Nicholas Sparks", "Suzanne Collins", "Harper Lee", "Margaret Atwood",
+                "Toni Morrison", "Ernest Hemingway", "F. Scott Fitzgerald"
+            ]
+            
+            for i in range(30):
+                book_id = f"B{100 + i:03d}"
+                title = f"Sample Book {i+1}"
+                author = np.random.choice(authors)
+                price = np.random.choice([9.99, 14.99, 19.99, 24.99])
+                
+                books_data.append({
+                    'book_id': book_id,
+                    'title': title,
+                    'author': author,
+                    'price': price
+                })
+            
+            # Convert to YAML format
+            books_yaml = yaml.dump(books_data, default_flow_style=False)
+            with open(os.path.join(dataset_dir, 'books.yaml'), 'w') as f:
+                f.write(books_yaml)
+        
+        print(f"✅ Created sample data in {data_dir}")
 
     def normalize_price_to_float(self, val):
         if pd.isna(val):
@@ -170,12 +237,17 @@ class DataProcessor:
 
     def process_dataset_folder(self, data_dir, out_dir):
         dataset_name = os.path.basename(os.path.normpath(data_dir))
-        print(f"\nProcessing dataset: {dataset_name}")
+        st.info(f"🔄 Processing dataset: {dataset_name}")
         os.makedirs(out_dir, exist_ok=True)
 
         users_path = os.path.join(data_dir, 'users.csv')
         orders_path = os.path.join(data_dir, 'orders.parquet')
         books_path = os.path.join(data_dir, 'books.yaml')
+
+        # Check if files exist, create sample data if not
+        if not all(os.path.exists(p) for p in [users_path, orders_path, books_path]):
+            st.warning(f"📝 Creating sample data for {dataset_name}...")
+            self.create_sample_data(data_dir)
 
         df_users = pd.read_csv(users_path, dtype=str)
         df_orders = self.read_parquet_with_hint(orders_path)
@@ -185,10 +257,6 @@ class DataProcessor:
             book['authors'] = self.extract_authors_from_book(book)
         
         df_books = pd.DataFrame(books_list)
-
-        print(f" users: {df_users.shape}")
-        print(f" orders: {df_orders.shape}")
-        print(f" books: {df_books.shape}")
 
         # Normalize orders columns
         ord_cols = df_orders.columns.tolist()
@@ -308,11 +376,16 @@ class DataProcessor:
             top_customer_user_ids = []
 
         out_prefix = os.path.join(out_dir, f"{dataset_name}")
-        df_orders.to_csv(out_prefix + "_orders_enriched.csv", index=False)
-        df_users_proc.to_csv(out_prefix + "_users_reconciled.csv", index=False)
-        df_books.to_csv(out_prefix + "_books_processed.csv", index=False)
-        daily_rev.to_csv(out_prefix + "_daily_revenue.csv", index=False)
-        pd.DataFrame(top5_records).to_csv(out_prefix + "_top5_days.csv", index=False)
+        
+        # Only save if output directory is writable (for deployment)
+        try:
+            df_orders.to_csv(out_prefix + "_orders_enriched.csv", index=False)
+            df_users_proc.to_csv(out_prefix + "_users_reconciled.csv", index=False)
+            df_books.to_csv(out_prefix + "_books_processed.csv", index=False)
+            daily_rev.to_csv(out_prefix + "_daily_revenue.csv", index=False)
+            pd.DataFrame(top5_records).to_csv(out_prefix + "_top5_days.csv", index=False)
+        except:
+            st.warning("⚠️ Could not save files (deployment environment)")
 
         summary = {
             'dataset': dataset_name,
@@ -325,16 +398,21 @@ class DataProcessor:
             'top_customer_user_ids': top_customer_user_ids,
             'top_customer_total_spent': float(round(top_total,2)),
         }
-        with open(out_prefix + "_summary.json", "w", encoding="utf-8") as f:
-            json.dump(summary, f, indent=2, ensure_ascii=False)
+        
+        try:
+            with open(out_prefix + "_summary.json", "w", encoding="utf-8") as f:
+                json.dump(summary, f, indent=2, ensure_ascii=False)
+        except:
+            st.warning("⚠️ Could not save summary file")
 
-        print(f"✅ Finished {dataset_name}: real_users={unique_real_users}, author_sets={unique_author_sets}")
+        st.success(f"✅ Finished {dataset_name}: {unique_real_users} users, {unique_author_sets} author sets")
         return summary
 
     def process_all_data(self, data_root='./data', out_dir='./output'):
-        """Process all datasets"""
+        """Process all datasets with automatic sample data creation"""
         if not os.path.exists(data_root):
-            raise FileNotFoundError(f"Data directory not found: {data_root}")
+            st.info("📝 Creating data directory and sample data...")
+            self.create_sample_data(data_root)
 
         datasets = []
         for entry in sorted(os.listdir(data_root)):
@@ -346,21 +424,33 @@ class DataProcessor:
             if all(os.path.exists(os.path.join(data_root, fn)) for fn in ['users.csv','orders.parquet','books.yaml']):
                 datasets = [data_root]
             else:
-                raise FileNotFoundError("No valid datasets found")
+                st.info("📝 No datasets found. Creating sample dataset...")
+                datasets = [data_root]
+                self.create_sample_data(data_root)
 
         all_summaries = []
-        for d in datasets:
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+        
+        for i, d in enumerate(datasets):
+            status_text.text(f"Processing {os.path.basename(d)}... ({i+1}/{len(datasets)})")
             try:
                 s = self.process_dataset_folder(d, out_dir)
                 all_summaries.append(s)
             except Exception as e:
-                print(f"❌ ERROR processing {d}: {e}")
+                st.error(f"❌ ERROR processing {d}: {e}")
                 continue
-
-        with open(os.path.join(out_dir, 'all_summaries.json'), 'w', encoding='utf-8') as f:
-            json.dump(all_summaries, f, indent=2, ensure_ascii=False)
+            progress_bar.progress((i + 1) / len(datasets))
         
-        print(f"✅ All datasets processed. Outputs saved to: {out_dir}")
+        status_text.text("✅ Data processing complete!")
+        
+        try:
+            with open(os.path.join(out_dir, 'all_summaries.json'), 'w', encoding='utf-8') as f:
+                json.dump(all_summaries, f, indent=2, ensure_ascii=False)
+        except:
+            st.warning("⚠️ Could not save combined summary file")
+        
+        st.success(f"✅ All datasets processed!")
         return all_summaries
 
 class BookstoreDashboard:
@@ -371,11 +461,9 @@ class BookstoreDashboard:
     def ensure_data_exists(self):
         """Make sure data is processed before showing dashboard"""
         if not os.path.exists(self.output_dir) or not any(fname.endswith('_summary.json') for fname in os.listdir(self.output_dir)):
-            st.info("🔄 First run: Processing data... This may take a moment.")
-            with st.spinner("Processing bookstore data..."):
+            with st.spinner("🔄 First run: Setting up sample data and processing..."):
                 self.processor.process_all_data()
-            st.success("✅ Data processed successfully!")
-    
+        
     def setup_page(self):
         st.set_page_config(
             page_title="Bookstore Analytics Dashboard",
@@ -459,6 +547,7 @@ class BookstoreDashboard:
         self.setup_page()
         
         st.markdown('<h1 class="main-header">📊 Bookstore Analytics Dashboard</h1>', unsafe_allow_html=True)
+        st.markdown("### 🚀 **Demo Version with Sample Data**")
         
         # Ensure data exists
         self.ensure_data_exists()
@@ -660,29 +749,12 @@ class BookstoreDashboard:
         st.markdown("""
         <div style="text-align: center; color: #7f8c8d; padding: 2rem 0;">
             <p><strong>Bookstore Analytics Platform</strong> • Business Intelligence Dashboard</p>
-            <p>Data Sources: orders.parquet, books.yaml, users.csv • Processed with Python</p>
+            <p>Demo version with sample data • Ready for production use with real data</p>
         </div>
         """, unsafe_allow_html=True)
 
 def main():
     """Main function"""
-    if not HAS_VISUALIZATION:
-        print("=" * 50)
-        print("📊 Bookstore Analytics Data Processor")
-        print("=" * 50)
-        
-        # Process data first
-        print("🔄 Processing data...")
-        processor = DataProcessor()
-        summaries = processor.process_all_data()
-        
-        print(f"✅ Processed {len(summaries)} datasets")
-        print("\n🚀 To launch the dashboard, make sure all packages are installed:")
-        print("pip install streamlit plotly pyyaml pyarrow")
-        print("Then run: streamlit run bookstore_analytics.py")
-        return
-    
-    # If we have visualization packages, launch the dashboard
     dashboard = BookstoreDashboard()
     dashboard.render_dashboard()
 
