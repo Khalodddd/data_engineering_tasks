@@ -1,33 +1,20 @@
 import os
 import re
 import json
-import argparse
 import math
 import pandas as pd
-import streamlit as st
-import plotly.express as px
-import plotly.graph_objects as go
 from collections import defaultdict
-import subprocess
-import sys
 
-def install_dependencies():
-    """Install required packages automatically"""
-    required_packages = ['pandas', 'plotly', 'pyyaml', 'pyarrow', 'streamlit']
-    
-    for package in required_packages:
-        try:
-            __import__(package)
-        except ImportError:
-            print(f"📦 Installing {package}...")
-            subprocess.check_call([sys.executable, "-m", "pip", "install", package])
-
-# Install dependencies first
-install_dependencies()
-
-# Now import the installed packages
-import yaml
-from collections import defaultdict
+# Try to import visualization packages
+try:
+    import streamlit as st
+    import plotly.express as px
+    import plotly.graph_objects as go
+    import yaml
+    HAS_VISUALIZATION = True
+except ImportError as e:
+    print(f"Missing visualization packages: {e}")
+    HAS_VISUALIZATION = False
 
 class DataProcessor:
     def __init__(self, eur_rate=1.2):
@@ -37,16 +24,18 @@ class DataProcessor:
         try:
             return pd.read_parquet(path)
         except Exception as e:
-            msg = str(e)
-            if "pyarrow" in msg or "fastparquet" in msg or "parquet" in msg.lower():
-                raise ImportError(
-                    "Reading parquet failed. Install a parquet engine locally (pyarrow):\n"
-                    "  pip install pyarrow\n\n"
-                    f"Original error: {e}"
-                )
-            raise
-
+            try:
+                import pyarrow
+                return pd.read_parquet(path)
+            except ImportError:
+                raise ImportError("Reading parquet files requires pyarrow. Please install: pip install pyarrow")
+    
     def read_yaml_list(self, path):
+        try:
+            import yaml
+        except ImportError:
+            raise ImportError("Please install PyYAML: pip install pyyaml")
+            
         with open(path, "r", encoding="utf-8") as f:
             obj = yaml.safe_load(f)
         if isinstance(obj, list):
@@ -179,60 +168,6 @@ class DataProcessor:
         
         return ['Unknown Author']
 
-    def create_sample_data(self, data_dir):
-        """Create sample data if none exists"""
-        os.makedirs(data_dir, exist_ok=True)
-        
-        # Create sample users.csv
-        users_data = """user_id,name,email,phone,address
-1,John Doe,john@email.com,123-456-7890,123 Main St
-2,Jane Smith,jane@email.com,098-765-4321,456 Oak Ave
-3,John Doe,john.doe@email.com,123-456-7890,123 Main Street
-4,Bob Wilson,bob@email.com,555-123-4567,789 Pine Rd"""
-        
-        with open(os.path.join(data_dir, 'users.csv'), 'w') as f:
-            f.write(users_data)
-        
-        # Create sample orders.parquet
-        orders_data = pd.DataFrame({
-            'user_id': ['1', '2', '1', '3', '4', '2'],
-            'book_id': ['B001', 'B002', 'B003', 'B001', 'B004', 'B005'],
-            'quantity': [2, 1, 1, 3, 2, 1],
-            'unit_price': ['$10.99', '€15.50', '$12.99', '$10.99', '€8.75', '$20.00'],
-            'timestamp_raw': ['2024-01-15 10:30:00', '2024-01-16 14:45:00', 
-                            '2024-01-17 09:15:00', '2024-01-18 16:20:00',
-                            '2024-01-19 11:00:00', '2024-01-20 13:30:00']
-        })
-        orders_data.to_parquet(os.path.join(data_dir, 'orders.parquet'), index=False)
-        
-        # Create sample books.yaml
-        books_data = """
-- book_id: B001
-  title: "The Great Novel"
-  author: "John Author"
-  price: 10.99
-- book_id: B002
-  title: "Science Fundamentals"
-  author: "Jane Writer"
-  price: 15.50
-- book_id: B003
-  title: "History of Everything"
-  authors: ["Bob Historian", "Alice Researcher"]
-  price: 12.99
-- book_id: B004
-  title: "Cooking Basics"
-  author: "Chef Charlie"
-  price: 8.75
-- book_id: B005
-  title: "Advanced Programming"
-  author: "Dr. Developer"
-  price: 20.00
-"""
-        with open(os.path.join(data_dir, 'books.yaml'), 'w') as f:
-            f.write(books_data)
-        
-        print(f"✅ Created sample data in {data_dir}")
-
     def process_dataset_folder(self, data_dir, out_dir):
         dataset_name = os.path.basename(os.path.normpath(data_dir))
         print(f"\nProcessing dataset: {dataset_name}")
@@ -241,11 +176,6 @@ class DataProcessor:
         users_path = os.path.join(data_dir, 'users.csv')
         orders_path = os.path.join(data_dir, 'orders.parquet')
         books_path = os.path.join(data_dir, 'books.yaml')
-
-        # Create sample data if files don't exist
-        if not all(os.path.exists(p) for p in [users_path, orders_path, books_path]):
-            print(f"📝 Creating sample data for {dataset_name}...")
-            self.create_sample_data(data_dir)
 
         df_users = pd.read_csv(users_path, dtype=str)
         df_orders = self.read_parquet_with_hint(orders_path)
@@ -394,10 +324,6 @@ class DataProcessor:
             'top_customer_cluster_id': top_cluster,
             'top_customer_user_ids': top_customer_user_ids,
             'top_customer_total_spent': float(round(top_total,2)),
-            'daily_rev_csv': out_prefix + "_daily_revenue.csv",
-            'orders_enriched_csv': out_prefix + "_orders_enriched.csv",
-            'users_reconciled_csv': out_prefix + "_users_reconciled.csv",
-            'books_processed_csv': out_prefix + "_books_processed.csv",
         }
         with open(out_prefix + "_summary.json", "w", encoding="utf-8") as f:
             json.dump(summary, f, indent=2, ensure_ascii=False)
@@ -406,10 +332,9 @@ class DataProcessor:
         return summary
 
     def process_all_data(self, data_root='./data', out_dir='./output'):
-        """Process all datasets with automatic sample data creation"""
+        """Process all datasets"""
         if not os.path.exists(data_root):
-            os.makedirs(data_root)
-            print(f"📁 Created data directory: {data_root}")
+            raise FileNotFoundError(f"Data directory not found: {data_root}")
 
         datasets = []
         for entry in sorted(os.listdir(data_root)):
@@ -421,9 +346,7 @@ class DataProcessor:
             if all(os.path.exists(os.path.join(data_root, fn)) for fn in ['users.csv','orders.parquet','books.yaml']):
                 datasets = [data_root]
             else:
-                print("📝 No datasets found. Creating sample dataset...")
-                datasets = [data_root]
-                self.create_sample_data(data_root)
+                raise FileNotFoundError("No valid datasets found")
 
         all_summaries = []
         for d in datasets:
@@ -440,7 +363,7 @@ class DataProcessor:
         print(f"✅ All datasets processed. Outputs saved to: {out_dir}")
         return all_summaries
 
-class Dashboard:
+class BookstoreDashboard:
     def __init__(self):
         self.processor = DataProcessor()
         self.output_dir = "./output"
@@ -742,8 +665,25 @@ class Dashboard:
         """, unsafe_allow_html=True)
 
 def main():
-    """Main function to run the application"""
-    dashboard = Dashboard()
+    """Main function"""
+    if not HAS_VISUALIZATION:
+        print("=" * 50)
+        print("📊 Bookstore Analytics Data Processor")
+        print("=" * 50)
+        
+        # Process data first
+        print("🔄 Processing data...")
+        processor = DataProcessor()
+        summaries = processor.process_all_data()
+        
+        print(f"✅ Processed {len(summaries)} datasets")
+        print("\n🚀 To launch the dashboard, make sure all packages are installed:")
+        print("pip install streamlit plotly pyyaml pyarrow")
+        print("Then run: streamlit run bookstore_analytics.py")
+        return
+    
+    # If we have visualization packages, launch the dashboard
+    dashboard = BookstoreDashboard()
     dashboard.render_dashboard()
 
 if __name__ == "__main__":
