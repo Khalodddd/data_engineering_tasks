@@ -6,6 +6,11 @@ import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime
 
+# === ADD THESE 2 LINES ===
+import subprocess
+if not os.path.exists("./output") and os.path.exists("./data"): subprocess.run(["python", "process_data.py"])
+# === END ===
+
 OUTPUT_DIR = "./output"
 
 # Professional Page Configuration
