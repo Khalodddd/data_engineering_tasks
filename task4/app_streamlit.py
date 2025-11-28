@@ -6,16 +6,6 @@ import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime
 
-# === AUTO-PROCESS DATA IF NEEDED ===
-if not os.path.exists("./output") and os.path.exists("./data"):
-    st.info("🔄 Processing data for first time...")
-    import subprocess
-    result = subprocess.run(["python", "process_data.py"], capture_output=True, text=True)
-    if result.returncode == 0:
-        st.success("✅ Data processed successfully!")
-    else:
-        st.error(f"❌ Data processing failed: {result.stderr}")
-
 OUTPUT_DIR = "./output"
 
 # Professional Page Configuration
@@ -80,7 +70,6 @@ if not os.path.exists(OUTPUT_DIR):
     st.error("❌ No processed data found. Please run process_data.py first.")
     st.stop()
 
-# [REST OF YOUR ORIGINAL CODE EXACTLY THE SAME...]
 # Load data with error handling
 datasets = {}
 for dataset in ["DATA1", "DATA2", "DATA3"]:
