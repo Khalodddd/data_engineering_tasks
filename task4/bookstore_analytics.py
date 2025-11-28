@@ -9,6 +9,10 @@ import plotly.express as px
 import plotly.graph_objects as go
 import yaml
 
+# FIX: Use absolute paths for Streamlit Cloud
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_ROOT = os.path.join(BASE_DIR, 'data')
+OUTPUT_DIR = os.path.join(BASE_DIR, 'output')
 class DataProcessor:
     def __init__(self, eur_rate=1.2):
         self.eur_rate = eur_rate
