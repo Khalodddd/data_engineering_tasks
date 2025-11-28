@@ -1,5 +1,11 @@
 # 📊 Bookstore Analytics Streamlit Website
 
+### 🔗 Live Streamlit Dashboard
+Access the deployed dashboard directly online:
+
+👉 **https://databook.streamlit.app**
+
+
 ![Streamlit Website Screenshot](web.jpeg)
 
 A comprehensive Streamlit application for processing and analyzing bookstore sales data across multiple datasets.  
