@@ -65,11 +65,18 @@ st.markdown("""
 # Header
 st.markdown('<h1 class="main-header">📊 Bookstore Analytics Dashboard</h1>', unsafe_allow_html=True)
 
+# === ADD THESE 3 DEBUG LINES ===
+st.sidebar.markdown("### 🔍 Debug Info")
+st.sidebar.write("Current dir:", os.getcwd())
+st.sidebar.write("Output exists:", os.path.exists(OUTPUT_DIR))
+# === END DEBUG LINES ===
+
 # Check if data exists
 if not os.path.exists(OUTPUT_DIR):
     st.error("❌ No processed data found. Please run process_data.py first.")
     st.stop()
 
+# [REST OF YOUR ORIGINAL CODE EXACTLY AS IS - 152 LINES]
 # Load data with error handling
 datasets = {}
 for dataset in ["DATA1", "DATA2", "DATA3"]:
