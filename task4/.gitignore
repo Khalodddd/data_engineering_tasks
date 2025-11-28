@@ -1,5 +1,6 @@
-# Create .gitignore if not exists
-echo "__pycache__/
+# Create a proper .gitignore file
+cat > .gitignore << 'EOF'
+__pycache__/
 *.pyc
 *.pyo
 *.pyd
@@ -15,10 +16,10 @@ venv/
 *~
 .DS_Store
 Thumbs.db
-output/
-*.parquet
-*.csv
-*.yaml
-*.json
-!requirements.txt
-" > .gitignore
+# Don't ignore data files - remove these lines:
+# output/
+# *.parquet  
+# *.csv
+# *.yaml
+# *.json
+EOF

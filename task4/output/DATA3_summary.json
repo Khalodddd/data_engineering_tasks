@@ -1,0 +1,46 @@
+{
+  "dataset": "DATA3",
+  "top5_days": [
+    {
+      "date": "2025-01-29",
+      "paid_price": 79537.29000000001
+    },
+    {
+      "date": "2024-12-26",
+      "paid_price": 75471.88
+    },
+    {
+      "date": "2024-12-17",
+      "paid_price": 70664.17
+    },
+    {
+      "date": "2024-07-25",
+      "paid_price": 66451.83
+    },
+    {
+      "date": "2025-02-03",
+      "paid_price": 64015.69
+    }
+  ],
+  "unique_real_users": 3290,
+  "unique_author_sets": 268,
+  "most_popular_author_sets": [],
+  "most_popular_authors": [
+    "Miss Wade Lebsack",
+    "Era Hodkiewicz",
+    "Miss Bok Barrows",
+    "Jeffery Leuschke PhD",
+    "Sook Halvorson",
+    "Lonnie Hilpert"
+  ],
+  "top_customer_cluster_id": "49002",
+  "top_customer_user_ids": [
+    "49002",
+    "49414"
+  ],
+  "top_customer_total_spent": 51470.91,
+  "daily_rev_csv": "./output\\DATA3_daily_revenue.csv",
+  "orders_enriched_csv": "./output\\DATA3_orders_enriched.csv",
+  "users_reconciled_csv": "./output\\DATA3_users_reconciled.csv",
+  "books_processed_csv": "./output\\DATA3_books_processed.csv"
+}

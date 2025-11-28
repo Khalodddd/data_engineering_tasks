@@ -1,0 +1,134 @@
+[
+  {
+    "dataset": "DATA1",
+    "top5_days": [
+      {
+        "date": "2024-12-05",
+        "paid_price": 98977.77
+      },
+      {
+        "date": "2024-11-03",
+        "paid_price": 95225.90000000001
+      },
+      {
+        "date": "2025-03-29",
+        "paid_price": 77216.56
+      },
+      {
+        "date": "2025-01-25",
+        "paid_price": 75254.23999999999
+      },
+      {
+        "date": "2025-02-10",
+        "paid_price": 70454.98
+      }
+    ],
+    "unique_real_users": 3115,
+    "unique_author_sets": 325,
+    "most_popular_author_sets": [],
+    "most_popular_authors": [
+      "Maynard Bartoletti Ret."
+    ],
+    "top_customer_cluster_id": "44650",
+    "top_customer_user_ids": [
+      "44650"
+    ],
+    "top_customer_total_spent": 55277.75,
+    "daily_rev_csv": "./output\\DATA1_daily_revenue.csv",
+    "orders_enriched_csv": "./output\\DATA1_orders_enriched.csv",
+    "users_reconciled_csv": "./output\\DATA1_users_reconciled.csv",
+    "books_processed_csv": "./output\\DATA1_books_processed.csv"
+  },
+  {
+    "dataset": "DATA2",
+    "top5_days": [
+      {
+        "date": "2024-11-15",
+        "paid_price": 77238.13
+      },
+      {
+        "date": "2024-07-18",
+        "paid_price": 64472.34
+      },
+      {
+        "date": "2025-04-17",
+        "paid_price": 59113.76
+      },
+      {
+        "date": "2024-12-10",
+        "paid_price": 58742.57
+      },
+      {
+        "date": "2024-11-29",
+        "paid_price": 57897.85
+      }
+    ],
+    "unique_real_users": 2663,
+    "unique_author_sets": 293,
+    "most_popular_author_sets": [],
+    "most_popular_authors": [
+      "Phil Mann",
+      "Hershel Treutel",
+      "Miss Modesto Denesik",
+      "Sen. Trula Bosco",
+      "Dante Kreiger",
+      "Charley Wehner IV"
+    ],
+    "top_customer_cluster_id": "54179",
+    "top_customer_user_ids": [
+      "54179",
+      "53372"
+    ],
+    "top_customer_total_spent": 49862.24,
+    "daily_rev_csv": "./output\\DATA2_daily_revenue.csv",
+    "orders_enriched_csv": "./output\\DATA2_orders_enriched.csv",
+    "users_reconciled_csv": "./output\\DATA2_users_reconciled.csv",
+    "books_processed_csv": "./output\\DATA2_books_processed.csv"
+  },
+  {
+    "dataset": "DATA3",
+    "top5_days": [
+      {
+        "date": "2025-01-29",
+        "paid_price": 79537.29000000001
+      },
+      {
+        "date": "2024-12-26",
+        "paid_price": 75471.88
+      },
+      {
+        "date": "2024-12-17",
+        "paid_price": 70664.17
+      },
+      {
+        "date": "2024-07-25",
+        "paid_price": 66451.83
+      },
+      {
+        "date": "2025-02-03",
+        "paid_price": 64015.69
+      }
+    ],
+    "unique_real_users": 3290,
+    "unique_author_sets": 268,
+    "most_popular_author_sets": [],
+    "most_popular_authors": [
+      "Miss Wade Lebsack",
+      "Era Hodkiewicz",
+      "Miss Bok Barrows",
+      "Jeffery Leuschke PhD",
+      "Sook Halvorson",
+      "Lonnie Hilpert"
+    ],
+    "top_customer_cluster_id": "49002",
+    "top_customer_user_ids": [
+      "49002",
+      "49414"
+    ],
+    "top_customer_total_spent": 51470.91,
+    "daily_rev_csv": "./output\\DATA3_daily_revenue.csv",
+    "orders_enriched_csv": "./output\\DATA3_orders_enriched.csv",
+    "users_reconciled_csv": "./output\\DATA3_users_reconciled.csv",
+    "books_processed_csv": "./output\\DATA3_books_processed.csv"
+  }
+]

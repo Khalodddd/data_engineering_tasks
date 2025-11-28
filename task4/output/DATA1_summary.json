@@ -1,0 +1,40 @@
+{
+  "dataset": "DATA1",
+  "top5_days": [
+    {
+      "date": "2024-12-05",
+      "paid_price": 98977.77
+    },
+    {
+      "date": "2024-11-03",
+      "paid_price": 95225.90000000001
+    },
+    {
+      "date": "2025-03-29",
+      "paid_price": 77216.56
+    },
+    {
+      "date": "2025-01-25",
+      "paid_price": 75254.23999999999
+    },
+    {
+      "date": "2025-02-10",
+      "paid_price": 70454.98
+    }
+  ],
+  "unique_real_users": 3115,
+  "unique_author_sets": 325,
+  "most_popular_author_sets": [],
+  "most_popular_authors": [
+    "Maynard Bartoletti Ret."
+  ],
+  "top_customer_cluster_id": "44650",
+  "top_customer_user_ids": [
+    "44650"
+  ],
+  "top_customer_total_spent": 55277.75,
+  "daily_rev_csv": "./output\\DATA1_daily_revenue.csv",
+  "orders_enriched_csv": "./output\\DATA1_orders_enriched.csv",
+  "users_reconciled_csv": "./output\\DATA1_users_reconciled.csv",
+  "books_processed_csv": "./output\\DATA1_books_processed.csv"
+}

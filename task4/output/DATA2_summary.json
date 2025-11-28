@@ -1,0 +1,46 @@
+{
+  "dataset": "DATA2",
+  "top5_days": [
+    {
+      "date": "2024-11-15",
+      "paid_price": 77238.13
+    },
+    {
+      "date": "2024-07-18",
+      "paid_price": 64472.34
+    },
+    {
+      "date": "2025-04-17",
+      "paid_price": 59113.76
+    },
+    {
+      "date": "2024-12-10",
+      "paid_price": 58742.57
+    },
+    {
+      "date": "2024-11-29",
+      "paid_price": 57897.85
+    }
+  ],
+  "unique_real_users": 2663,
+  "unique_author_sets": 293,
+  "most_popular_author_sets": [],
+  "most_popular_authors": [
+    "Phil Mann",
+    "Hershel Treutel",
+    "Miss Modesto Denesik",
+    "Sen. Trula Bosco",
+    "Dante Kreiger",
+    "Charley Wehner IV"
+  ],
+  "top_customer_cluster_id": "54179",
+  "top_customer_user_ids": [
+    "54179",
+    "53372"
+  ],
+  "top_customer_total_spent": 49862.24,
+  "daily_rev_csv": "./output\\DATA2_daily_revenue.csv",
+  "orders_enriched_csv": "./output\\DATA2_orders_enriched.csv",
+  "users_reconciled_csv": "./output\\DATA2_users_reconciled.csv",
+  "books_processed_csv": "./output\\DATA2_books_processed.csv"
+}
