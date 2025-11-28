@@ -13,6 +13,7 @@ import yaml
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_ROOT = os.path.join(BASE_DIR, 'data')
 OUTPUT_DIR = os.path.join(BASE_DIR, 'output')
+
 class DataProcessor:
     def __init__(self, eur_rate=1.2):
         self.eur_rate = eur_rate
@@ -39,85 +40,6 @@ class DataProcessor:
             if all(isinstance(v, dict) for v in vals):
                 return vals
         return []
-
-    def create_sample_data(self, data_dir):
-        """Create sample data for deployment"""
-        os.makedirs(data_dir, exist_ok=True)
-        
-        # Create sample datasets
-        for dataset in ["DATA1", "DATA2", "DATA3"]:
-            dataset_dir = os.path.join(data_dir, dataset)
-            os.makedirs(dataset_dir, exist_ok=True)
-            
-            # Sample users data
-            users_data = f"""user_id,name,email,phone,address
-1,John Doe,john.doe@email.com,555-0101,123 Main St
-2,Jane Smith,jane.smith@email.com,555-0102,456 Oak Ave
-3,Robert Johnson,robert.j@email.com,555-0103,789 Pine Rd
-4,Emily Davis,emily.davis@email.com,555-0104,321 Elm St
-5,Michael Wilson,mike.wilson@email.com,555-0105,654 Maple Dr
-6,Sarah Brown,sarah.b@email.com,555-0106,987 Cedar Ln
-7,David Lee,david.lee@email.com,555-0107,147 Birch St
-8,Lisa Garcia,lisa.g@email.com,555-0108,258 Walnut Ave
-9,James Miller,james.m@email.com,555-0109,369 Spruce Rd
-10,Maria Lopez,maria.lopez@email.com,555-0110,741 Willow Ln"""
-            
-            with open(os.path.join(dataset_dir, 'users.csv'), 'w') as f:
-                f.write(users_data)
-            
-            # Sample orders data
-            import numpy as np
-            np.random.seed(42)  # For consistent results
-            
-            dates = pd.date_range('2024-01-01', '2024-03-31', freq='D')
-            orders_data = []
-            
-            for i in range(200):  # Create 200 sample orders
-                order_date = np.random.choice(dates)
-                user_id = np.random.randint(1, 11)
-                book_id = f"B{np.random.randint(100, 130):03d}"
-                quantity = np.random.randint(1, 4)
-                price = np.random.choice([9.99, 14.99, 19.99, 24.99, 29.99])
-                
-                orders_data.append({
-                    'user_id': str(user_id),
-                    'book_id': book_id,
-                    'quantity': quantity,
-                    'unit_price': f"${price:.2f}",
-                    'timestamp_raw': order_date.strftime('%Y-%m-%d %H:%M:%S')
-                })
-            
-            df_orders = pd.DataFrame(orders_data)
-            df_orders.to_parquet(os.path.join(dataset_dir, 'orders.parquet'), index=False)
-            
-            # Sample books data
-            books_data = []
-            authors = [
-                "J.K. Rowling", "Stephen King", "George R.R. Martin", "Agatha Christie",
-                "James Patterson", "Dan Brown", "John Grisham", "Stephenie Meyer",
-                "Nicholas Sparks", "Suzanne Collins", "Harper Lee", "Margaret Atwood",
-                "Toni Morrison", "Ernest Hemingway", "F. Scott Fitzgerald"
-            ]
-            
-            for i in range(30):
-                book_id = f"B{100 + i:03d}"
-                title = f"Sample Book {i+1}"
-                author = np.random.choice(authors)
-                price = np.random.choice([9.99, 14.99, 19.99, 24.99])
-                
-                books_data.append({
-                    'book_id': book_id,
-                    'title': title,
-                    'author': author,
-                    'price': price
-                })
-            
-            # Convert to YAML format
-            books_yaml = yaml.dump(books_data, default_flow_style=False)
-            with open(os.path.join(dataset_dir, 'books.yaml'), 'w') as f:
-                f.write(books_yaml)
-        
-        print(f"✅ Created sample data in {data_dir}")
 
     def normalize_price_to_float(self, val):
         if pd.isna(val):
@@ -248,10 +170,11 @@ class DataProcessor:
         orders_path = os.path.join(data_dir, 'orders.parquet')
         books_path = os.path.join(data_dir, 'books.yaml')
 
-        # Check if files exist, create sample data if not
+        # Check if files exist - NO SAMPLE DATA CREATION
         if not all(os.path.exists(p) for p in [users_path, orders_path, books_path]):
-            st.warning(f"📝 Creating sample data for {dataset_name}...")
-            self.create_sample_data(data_dir)
+            st.error(f"❌ Missing data files in {dataset_name}")
+            st.error(f"Required files: users.csv, orders.parquet, books.yaml")
+            return None
 
         df_users = pd.read_csv(users_path, dtype=str)
         df_orders = self.read_parquet_with_hint(orders_path)
@@ -412,25 +335,26 @@ class DataProcessor:
         st.success(f"✅ Finished {dataset_name}: {unique_real_users} users, {unique_author_sets} author sets")
         return summary
 
-    def process_all_data(self, data_root='./data', out_dir='./output'):
-        """Process all datasets with automatic sample data creation"""
+    def process_all_data(self, data_root=DATA_ROOT, out_dir=OUTPUT_DIR):
+        """Process all datasets - NO SAMPLE DATA CREATION"""
+        st.info(f"📁 Looking for data in: {data_root}")
+        
         if not os.path.exists(data_root):
-            st.info("📝 Creating data directory and sample data...")
-            self.create_sample_data(data_root)
+            st.error(f"❌ Data directory not found: {data_root}")
+            st.info("Please make sure your data files are in the repository under 'data/' folder")
+            return []
 
         datasets = []
         for entry in sorted(os.listdir(data_root)):
             p = os.path.join(data_root, entry)
-            if os.path.isdir(p) and entry.lower().startswith('data'):
+            if os.path.isdir(p) and entry.upper().startswith('DATA'):
                 datasets.append(p)
         
+        st.info(f"📊 Found {len(datasets)} datasets: {[os.path.basename(d) for d in datasets]}")
+        
         if not datasets:
-            if all(os.path.exists(os.path.join(data_root, fn)) for fn in ['users.csv','orders.parquet','books.yaml']):
-                datasets = [data_root]
-            else:
-                st.info("📝 No datasets found. Creating sample dataset...")
-                datasets = [data_root]
-                self.create_sample_data(data_root)
+            st.error("❌ No DATA folders found in data directory")
+            return []
 
         all_summaries = []
         progress_bar = st.progress(0)
@@ -440,7 +364,8 @@ class DataProcessor:
             status_text.text(f"Processing {os.path.basename(d)}... ({i+1}/{len(datasets)})")
             try:
                 s = self.process_dataset_folder(d, out_dir)
-                all_summaries.append(s)
+                if s:
+                    all_summaries.append(s)
             except Exception as e:
                 st.error(f"❌ ERROR processing {d}: {e}")
                 continue
@@ -460,14 +385,15 @@ class DataProcessor:
 class BookstoreDashboard:
     def __init__(self):
         self.processor = DataProcessor()
-        self.output_dir = "./output"
+        self.output_dir = OUTPUT_DIR
         
     def ensure_data_exists(self):
         """Make sure data is processed before showing dashboard"""
         if not os.path.exists(self.output_dir) or not any(fname.endswith('_summary.json') for fname in os.listdir(self.output_dir)):
-            with st.spinner("🔄 First run: Setting up sample data and processing..."):
-                self.processor.process_all_data()
-        
+            with st.spinner("🔄 First run: Processing data..."):
+                return self.processor.process_all_data()
+        return True
+    
     def setup_page(self):
         st.set_page_config(
             page_title="Bookstore Analytics Dashboard",
@@ -551,7 +477,7 @@ class BookstoreDashboard:
         self.setup_page()
         
         st.markdown('<h1 class="main-header">📊 Bookstore Analytics Dashboard</h1>', unsafe_allow_html=True)
-        st.markdown("### 🚀 **Demo Version with Sample Data**")
+        st.markdown("### 📊 **Bookstore Analytics Dashboard**")
         
         # Ensure data exists
         self.ensure_data_exists()
@@ -753,7 +679,7 @@ class BookstoreDashboard:
         st.markdown("""
         <div style="text-align: center; color: #7f8c8d; padding: 2rem 0;">
             <p><strong>Bookstore Analytics Platform</strong> • Business Intelligence Dashboard</p>
-            <p>Demo version with sample data • Ready for production use with real data</p>
+            <p>Data Sources: orders.parquet, books.yaml, users.csv • Processed with Python</p>
         </div>
         """, unsafe_allow_html=True)
 
