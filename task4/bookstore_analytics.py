@@ -441,7 +441,7 @@ class VerifiedDataProcessor:
 
         return all_summaries
 
-class DarkThemeBookstoreDashboard:
+class RobustBookstoreDashboard:
     def __init__(self):
         self.processor = VerifiedDataProcessor()
         self.output_dir = OUTPUT_DIR
@@ -582,15 +582,6 @@ class DarkThemeBookstoreDashboard:
                 text-transform: uppercase;
                 letter-spacing: 0.5px;
             }
-            .revenue-highlight {
-                background: linear-gradient(135deg, #00D4AA, #0099FF);
-                color: #000000;
-                padding: 2rem;
-                border-radius: 12px;
-                text-align: center;
-                margin: 1rem 0;
-                font-weight: bold;
-            }
             
             /* Plotly chart dark theme */
             .js-plotly-plot .plotly .modebar {
@@ -603,15 +594,52 @@ class DarkThemeBookstoreDashboard:
         """, unsafe_allow_html=True)
     
     def ensure_data_exists(self):
-        """Make sure data is processed before showing dashboard"""
-        if not os.path.exists(self.output_dir) or not any(fname.endswith('_summary.json') for fname in os.listdir(self.output_dir)):
-            with st.spinner("🔄 Processing data for dashboard..."):
-                return self.processor.process_all_data()
-        return True
+        """Make sure data is processed before showing dashboard - with proper error handling"""
+        try:
+            if not os.path.exists(self.output_dir):
+                os.makedirs(self.output_dir, exist_ok=True)
+            
+            # Check if summary files exist and are valid
+            summary_files = [f for f in os.listdir(self.output_dir) if f.endswith('_summary.json')]
+            
+            if not summary_files:
+                st.info("🔄 Processing data for the first time... This may take a moment.")
+                summaries = self.processor.process_all_data()
+                return bool(summaries)
+            else:
+                # Validate that the files contain proper data
+                for summary_file in summary_files:
+                    file_path = os.path.join(self.output_dir, summary_file)
+                    try:
+                        with open(file_path, 'r', encoding='utf-8') as f:
+                            data = json.load(f)
+                        # Check if required fields exist
+                        if 'total_revenue' not in data:
+                            st.warning(f"Invalid data in {summary_file}, reprocessing...")
+                            return self.force_reprocess()
+                    except (json.JSONDecodeError, KeyError):
+                        st.warning(f"Corrupted data in {summary_file}, reprocessing...")
+                        return self.force_reprocess()
+                
+                return True
+                
+        except Exception as e:
+            st.error(f"Error ensuring data exists: {e}")
+            return False
+    
+    def force_reprocess(self):
+        """Force reprocessing of all data"""
+        try:
+            summaries = self.processor.process_all_data()
+            return bool(summaries)
+        except Exception as e:
+            st.error(f"Error during reprocessing: {e}")
+            return False
     
     def load_data(self):
-        """Load processed data"""
+        """Load processed data with robust error handling"""
         datasets = {}
+        
         for dataset in ["DATA1", "DATA2", "DATA3"]:
             summary_file = os.path.join(self.output_dir, f"{dataset}_summary.json")
             
@@ -620,83 +648,115 @@ class DarkThemeBookstoreDashboard:
                     with open(summary_file, "r", encoding="utf-8") as f:
                         summary_data = json.load(f)
                     
-                    datasets[dataset] = {
-                        "summary": summary_data
-                    }
-                    
+                    # Validate the loaded data has required fields
+                    required_fields = ['total_revenue', 'unique_real_users', 'unique_author_sets']
+                    if all(field in summary_data for field in required_fields):
+                        datasets[dataset] = {
+                            "summary": summary_data
+                        }
+                    else:
+                        st.warning(f"Missing required fields in {dataset}, skipping...")
+                        
                 except Exception as e:
                     st.error(f"❌ Error loading {dataset}: {e}")
+                    continue
+            else:
+                st.warning(f"Summary file not found for {dataset}")
         
         return datasets
     
     def create_revenue_comparison_chart(self, datasets):
-        """Create dark theme revenue comparison chart"""
-        revenue_data = []
-        for dataset_name, data in datasets.items():
-            summary = data["summary"]
-            revenue_data.append({
-                'Dataset': dataset_name,
-                'Revenue': summary['total_revenue'],
-                'Users': summary['unique_real_users'],
-                'Author Sets': summary['unique_author_sets']
-            })
-        
-        df = pd.DataFrame(revenue_data)
-        
-        fig = px.bar(
-            df, 
-            x='Dataset', 
-            y='Revenue',
-            title='<b>Total Revenue by Dataset</b>',
-            color='Dataset',
-            color_discrete_sequence=['#00D4AA', '#0099FF', '#FF6B6B'],
-            text='Revenue'
-        )
-        
-        fig.update_traces(
-            texttemplate='$%{y:,.0f}',
-            textposition='outside',
-            marker_line_color='#ffffff',
-            marker_line_width=1,
-            opacity=0.9
-        )
-        
-        fig.update_layout(
-            plot_bgcolor='#1e1e1e',
-            paper_bgcolor='#1e1e1e',
-            font=dict(color="#ffffff", size=12),
-            title_font_size=20,
-            showlegend=False,
-            height=400
-        )
-        
-        fig.update_xaxes(
-            gridcolor='#333',
-            linecolor='#333',
-            tickfont=dict(color="#ffffff")
-        )
-        
-        fig.update_yaxes(
-            title="Revenue ($)",
-            gridcolor='#333',
-            linecolor='#333',
-            tickfont=dict(color="#ffffff")
-        )
-        
-        return fig
+        """Create dark theme revenue comparison chart with error handling"""
+        try:
+            revenue_data = []
+            for dataset_name, data in datasets.items():
+                summary = data["summary"]
+                revenue_data.append({
+                    'Dataset': dataset_name,
+                    'Revenue': summary.get('total_revenue', 0),
+                    'Users': summary.get('unique_real_users', 0),
+                    'Author Sets': summary.get('unique_author_sets', 0)
+                })
+            
+            if not revenue_data:
+                st.warning("No revenue data available for chart")
+                return None
+            
+            df = pd.DataFrame(revenue_data)
+            
+            fig = px.bar(
+                df, 
+                x='Dataset', 
+                y='Revenue',
+                title='<b>Total Revenue by Dataset</b>',
+                color='Dataset',
+                color_discrete_sequence=['#00D4AA', '#0099FF', '#FF6B6B'],
+                text='Revenue'
+            )
+            
+            fig.update_traces(
+                texttemplate='$%{y:,.0f}',
+                textposition='outside',
+                marker_line_color='#ffffff',
+                marker_line_width=1,
+                opacity=0.9
+            )
+            
+            fig.update_layout(
+                plot_bgcolor='#1e1e1e',
+                paper_bgcolor='#1e1e1e',
+                font=dict(color="#ffffff", size=12),
+                title_font_size=20,
+                showlegend=False,
+                height=400
+            )
+            
+            fig.update_xaxes(
+                gridcolor='#333',
+                linecolor='#333',
+                tickfont=dict(color="#ffffff")
+            )
+            
+            fig.update_yaxes(
+                title="Revenue ($)",
+                gridcolor='#333',
+                linecolor='#333',
+                tickfont=dict(color="#ffffff")
+            )
+            
+            return fig
+            
+        except Exception as e:
+            st.error(f"Error creating revenue chart: {e}")
+            return None
     
     def render_dashboard(self):
-        """Dark theme dashboard rendering"""
+        """Robust dashboard rendering with comprehensive error handling"""
         self.setup_page()
         
         # Header with dark theme
         st.markdown('<div class="main-header">📊 Bookstore Analytics Dashboard</div>', unsafe_allow_html=True)
         st.markdown('<div class="subheader">Dark Theme - Professional Business Intelligence</div>', unsafe_allow_html=True)
         
+        # Ensure data exists with proper loading state
+        with st.spinner("🔄 Loading and validating data..."):
+            data_ready = self.ensure_data_exists()
+        
+        if not data_ready:
+            st.error("❌ Failed to load or process data. Please check the data files and try again.")
+            return
+        
+        # Load data
+        datasets = self.load_data()
+        
+        if not datasets:
+            st.error("❌ No valid datasets available. Please check data processing.")
+            return
+        
         # Status indicator
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
-            st.markdown('<div style="text-align: center;"><span class="status-badge">✅ 3 DATASETS SUCCESSFULLY LOADED</span></div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="text-align: center;"><span class="status-badge">✅ {len(datasets)} DATASETS SUCCESSFULLY LOADED</span></div>', unsafe_allow_html=True)
         
         # Create dark theme tabs
         tab1, tab2, tab3, tab4 = st.tabs([
@@ -706,239 +766,245 @@ class DarkThemeBookstoreDashboard:
             "📋 DATA3 REPORT"
         ])
         
-        # Ensure data exists
-        self.ensure_data_exists()
-        
-        # Load data
-        datasets = self.load_data()
-        
-        if not datasets:
-            st.error("❌ No datasets available. Please check data processing.")
-            return
-        
         # EXECUTIVE OVERVIEW TAB
         with tab1:
-            st.markdown('<div class="section-header">📈 Executive Performance Dashboard</div>', unsafe_allow_html=True)
-            
-            # Top Level KPIs in dark theme
-            st.markdown("### 🎯 Key Business Metrics")
-            kpi_cols = st.columns(3)
-            
-            total_revenue = sum(data["summary"]["total_revenue"] for data in datasets.values())
-            total_users = sum(data["summary"]["unique_real_users"] for data in datasets.values())
-            avg_revenue_per_user = total_revenue / total_users if total_users > 0 else 0
-            
-            with kpi_cols[0]:
-                st.markdown(f"""
-                <div class="metric-card">
-                    <div class="kpi-label">Total Revenue</div>
-                    <div class="kpi-value">${total_revenue:,.0f}</div>
-                    <div style="color: #00D4AA; font-weight: 600;">+12.5% vs target</div>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            with kpi_cols[1]:
-                st.markdown(f"""
-                <div class="metric-card">
-                    <div class="kpi-label">Total Customers</div>
-                    <div class="kpi-value">{total_users:,}</div>
-                    <div style="color: #00D4AA; font-weight: 600;">+8.3% growth</div>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            with kpi_cols[2]:
-                st.markdown(f"""
-                <div class="metric-card">
-                    <div class="kpi-label">Avg Revenue/User</div>
-                    <div class="kpi-value">${avg_revenue_per_user:.0f}</div>
-                    <div style="color: #00D4AA; font-weight: 600;">+3.8% improvement</div>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            # Revenue Comparison Chart
-            st.markdown("### 📊 Revenue Performance")
-            revenue_chart = self.create_revenue_comparison_chart(datasets)
-            st.plotly_chart(revenue_chart, use_container_width=True)
-            
-            # Dataset Performance
-            st.markdown("### 🏆 Dataset Performance Summary")
-            perf_cols = st.columns(3)
-            
-            for i, (dataset_name, data) in enumerate(datasets.items()):
-                summary = data["summary"]
-                with perf_cols[i]:
-                    colors = ["#00D4AA", "#0099FF", "#FF6B6B"]
+            try:
+                st.markdown('<div class="section-header">📈 Executive Performance Dashboard</div>', unsafe_allow_html=True)
+                
+                # Top Level KPIs in dark theme
+                st.markdown("### 🎯 Key Business Metrics")
+                kpi_cols = st.columns(3)
+                
+                # Safe calculations with defaults
+                total_revenue = sum(data["summary"].get('total_revenue', 0) for data in datasets.values())
+                total_users = sum(data["summary"].get('unique_real_users', 0) for data in datasets.values())
+                avg_revenue_per_user = total_revenue / total_users if total_users > 0 else 0
+                
+                with kpi_cols[0]:
                     st.markdown(f"""
-                    <div class="dataset-card">
-                        <h3 style="color: {colors[i]}; margin: 0 0 1rem 0; border-bottom: 2px solid {colors[i]}; padding-bottom: 0.5rem;">{dataset_name}</h3>
-                        <div style="font-size: 1.8rem; font-weight: bold; color: #ffffff; margin: 0.5rem 0;">${summary['total_revenue']:,.0f}</div>
-                        <div style="display: flex; justify-content: space-between; margin: 0.8rem 0;">
-                            <span style="color: #cccccc;">👥 Users:</span>
-                            <span style="font-weight: bold; color: #ffffff;">{summary['unique_real_users']:,}</span>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; margin: 0.8rem 0;">
-                            <span style="color: #cccccc;">📚 Authors:</span>
-                            <span style="font-weight: bold; color: #ffffff;">{summary['unique_author_sets']}</span>
-                        </div>
+                    <div class="metric-card">
+                        <div class="kpi-label">Total Revenue</div>
+                        <div class="kpi-value">${total_revenue:,.0f}</div>
+                        <div style="color: #00D4AA; font-weight: 600;">+12.5% vs target</div>
                     </div>
                     """, unsafe_allow_html=True)
+                
+                with kpi_cols[1]:
+                    st.markdown(f"""
+                    <div class="metric-card">
+                        <div class="kpi-label">Total Customers</div>
+                        <div class="kpi-value">{total_users:,}</div>
+                        <div style="color: #00D4AA; font-weight: 600;">+8.3% growth</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                with kpi_cols[2]:
+                    st.markdown(f"""
+                    <div class="metric-card">
+                        <div class="kpi-label">Avg Revenue/User</div>
+                        <div class="kpi-value">${avg_revenue_per_user:.0f}</div>
+                        <div style="color: #00D4AA; font-weight: 600;">+3.8% improvement</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                # Revenue Comparison Chart
+                st.markdown("### 📊 Revenue Performance")
+                revenue_chart = self.create_revenue_comparison_chart(datasets)
+                if revenue_chart:
+                    st.plotly_chart(revenue_chart, use_container_width=True)
+                else:
+                    st.info("No revenue data available for visualization")
+                
+                # Dataset Performance
+                st.markdown("### 🏆 Dataset Performance Summary")
+                perf_cols = st.columns(3)
+                
+                for i, (dataset_name, data) in enumerate(datasets.items()):
+                    summary = data["summary"]
+                    with perf_cols[i]:
+                        colors = ["#00D4AA", "#0099FF", "#FF6B6B"]
+                        st.markdown(f"""
+                        <div class="dataset-card">
+                            <h3 style="color: {colors[i]}; margin: 0 0 1rem 0; border-bottom: 2px solid {colors[i]}; padding-bottom: 0.5rem;">{dataset_name}</h3>
+                            <div style="font-size: 1.8rem; font-weight: bold; color: #ffffff; margin: 0.5rem 0;">${summary.get('total_revenue', 0):,.0f}</div>
+                            <div style="display: flex; justify-content: space-between; margin: 0.8rem 0;">
+                                <span style="color: #cccccc;">👥 Users:</span>
+                                <span style="font-weight: bold; color: #ffffff;">{summary.get('unique_real_users', 0):,}</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin: 0.8rem 0;">
+                                <span style="color: #cccccc;">📚 Authors:</span>
+                                <span style="font-weight: bold; color: #ffffff;">{summary.get('unique_author_sets', 0)}</span>
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
+            except Exception as e:
+                st.error(f"Error in executive overview: {e}")
         
         # INDIVIDUAL DATASET TABS
         for i, (dataset_name, data) in enumerate(datasets.items()):
             tab = [tab2, tab3, tab4][i]
             
             with tab:
-                summary = data["summary"]
-                colors = ["#00D4AA", "#0099FF", "#FF6B6B"]
-                
-                # Dataset Header
-                st.markdown(f'<div class="section-header">🔍 {dataset_name} - Detailed Analysis</div>', unsafe_allow_html=True)
-                
-                # Performance Overview
-                st.markdown("### 📈 Performance Overview")
-                
-                col1, col2, col3, col4 = st.columns(4)
-                
-                with col1:
-                    unique_users = summary.get('unique_real_users', 0)
-                    st.markdown(f"""
-                    <div class="metric-card">
-                        <div class="kpi-label">Unique Users</div>
-                        <div class="kpi-value">{unique_users:,}</div>
-                        <div style="color: #cccccc; font-size: 0.8rem;">After deduplication</div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                
-                with col2:
-                    author_sets = summary.get('unique_author_sets', 0)
-                    st.markdown(f"""
-                    <div class="metric-card">
-                        <div class="kpi-label">Author Sets</div>
-                        <div class="kpi-value">{author_sets}</div>
-                        <div style="color: #cccccc; font-size: 0.8rem;">Unique combinations</div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                
-                with col3:
-                    authors = summary.get("most_popular_authors", [])
-                    display_author = authors[0] if authors else "No data"
-                    st.markdown(f"""
-                    <div class="metric-card">
-                        <div class="kpi-label">Popular Author</div>
-                        <div style="font-size: 1.1rem; font-weight: bold; color: #ffffff; margin: 0.5rem 0; line-height: 1.3;">{display_author}</div>
-                        <div style="color: #cccccc; font-size: 0.8rem;">Most frequent in catalog</div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                
-                with col4:
-                    total_spent = summary.get('top_customer_total_spent', 0)
-                    st.markdown(f"""
-                    <div class="metric-card">
-                        <div class="kpi-label">Top Spender</div>
-                        <div class="kpi-value">${total_spent:,.0f}</div>
-                        <div style="color: #cccccc; font-size: 0.8rem;">Total customer spending</div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                
-                st.markdown("---")
-                
-                # Two column layout
-                col_left, col_right = st.columns(2)
-                
-                with col_left:
-                    st.markdown("### 📅 Top Revenue Days")
+                try:
+                    summary = data["summary"]
+                    colors = ["#00D4AA", "#0099FF", "#FF6B6B"]
                     
-                    top5_days = summary.get("top5_days", [])
-                    if top5_days:
-                        for j, day in enumerate(top5_days[:5], 1):
-                            date = day.get('date', 'Unknown').replace('NI ', '')
-                            revenue = day.get('paid_price', 0)
-                            rank_colors = ["#00D4AA", "#0099FF", "#FF6B6B", "#FFD93D", "#9B59B6"]
-                            
-                            st.markdown(f"""
-                            <div class="top-day-card">
-                                <div style="display: flex; justify-content: space-between; align-items: center;">
-                                    <div style="display: flex; align-items: center;">
-                                        <div style="background: {rank_colors[j-1]}; color: #000000; border-radius: 6px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; font-weight: bold; margin-right: 12px;">#{j}</div>
-                                        <div>
-                                            <strong style="font-size: 1rem; color: #ffffff;">{date}</strong>
+                    # Dataset Header
+                    st.markdown(f'<div class="section-header">🔍 {dataset_name} - Detailed Analysis</div>', unsafe_allow_html=True)
+                    
+                    # Performance Overview
+                    st.markdown("### 📈 Performance Overview")
+                    
+                    col1, col2, col3, col4 = st.columns(4)
+                    
+                    with col1:
+                        unique_users = summary.get('unique_real_users', 0)
+                        st.markdown(f"""
+                        <div class="metric-card">
+                            <div class="kpi-label">Unique Users</div>
+                            <div class="kpi-value">{unique_users:,}</div>
+                            <div style="color: #cccccc; font-size: 0.8rem;">After deduplication</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    
+                    with col2:
+                        author_sets = summary.get('unique_author_sets', 0)
+                        st.markdown(f"""
+                        <div class="metric-card">
+                            <div class="kpi-label">Author Sets</div>
+                            <div class="kpi-value">{author_sets}</div>
+                            <div style="color: #cccccc; font-size: 0.8rem;">Unique combinations</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    
+                    with col3:
+                        authors = summary.get("most_popular_authors", ["No data"])
+                        display_author = authors[0] if authors else "No data"
+                        st.markdown(f"""
+                        <div class="metric-card">
+                            <div class="kpi-label">Popular Author</div>
+                            <div style="font-size: 1.1rem; font-weight: bold; color: #ffffff; margin: 0.5rem 0; line-height: 1.3;">{display_author}</div>
+                            <div style="color: #cccccc; font-size: 0.8rem;">Most frequent in catalog</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    
+                    with col4:
+                        total_spent = summary.get('top_customer_total_spent', 0)
+                        st.markdown(f"""
+                        <div class="metric-card">
+                            <div class="kpi-label">Top Spender</div>
+                            <div class="kpi-value">${total_spent:,.0f}</div>
+                            <div style="color: #cccccc; font-size: 0.8rem;">Total customer spending</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    
+                    st.markdown("---")
+                    
+                    # Two column layout
+                    col_left, col_right = st.columns(2)
+                    
+                    with col_left:
+                        st.markdown("### 📅 Top Revenue Days")
+                        
+                        top5_days = summary.get("top5_days", [])
+                        if top5_days:
+                            for j, day in enumerate(top5_days[:5], 1):
+                                date = day.get('date', 'Unknown').replace('NI ', '')
+                                revenue = day.get('paid_price', 0)
+                                rank_colors = ["#00D4AA", "#0099FF", "#FF6B6B", "#FFD93D", "#9B59B6"]
+                                
+                                st.markdown(f"""
+                                <div class="top-day-card">
+                                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                                        <div style="display: flex; align-items: center;">
+                                            <div style="background: {rank_colors[j-1]}; color: #000000; border-radius: 6px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; font-weight: bold; margin-right: 12px;">#{j}</div>
+                                            <div>
+                                                <strong style="font-size: 1rem; color: #ffffff;">{date}</strong>
+                                            </div>
+                                        </div>
+                                        <div style="font-weight: bold; color: #00D4AA; font-size: 1.1rem;">
+                                            ${revenue:,.2f}
                                         </div>
                                     </div>
-                                    <div style="font-weight: bold; color: #00D4AA; font-size: 1.1rem;">
-                                        ${revenue:,.2f}
-                                    </div>
+                                </div>
+                                """, unsafe_allow_html=True)
+                        else:
+                            st.info("No revenue day data available")
+                    
+                    with col_right:
+                        st.markdown("### 👑 Best Buyer Details")
+                        
+                        buyer_ids = summary.get("top_customer_user_ids", [])
+                        total_spent = summary.get('top_customer_total_spent', 0)
+                        
+                        if buyer_ids:
+                            st.markdown(f"""
+                            <div class="customer-card">
+                                <div style="text-align: center; margin-bottom: 1rem;">
+                                    <div style="font-size: 1.2rem; font-weight: bold; color: #ffffff; margin-bottom: 0.5rem;">🏆 Top Customer</div>
+                                </div>
+                                <div style="background: #2d2d2d; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                                    <div style="font-size: 0.9rem; color: #cccccc; margin-bottom: 0.5rem;">Customer ID(s)</div>
+                                    <div style="font-size: 1.1em; font-weight: 600; color: #ffffff; font-family: monospace;">{', '.join(map(str, buyer_ids[:2]))}{'...' if len(buyer_ids) > 2 else ''}</div>
+                                </div>
+                                <div style="background: #00D4AA; color: #000000; padding: 1.2rem; border-radius: 8px; text-align: center;">
+                                    <div style="font-size: 0.9rem; margin-bottom: 0.5rem; font-weight: bold;">TOTAL LIFETIME VALUE</div>
+                                    <div style="font-size: 1.8rem; font-weight: bold;">${total_spent:,.2f}</div>
                                 </div>
                             </div>
                             """, unsafe_allow_html=True)
-                    else:
-                        st.info("No revenue day data available")
-                
-                with col_right:
-                    st.markdown("### 👑 Best Buyer Details")
+                        else:
+                            st.info("No buyer data available")
                     
-                    buyer_ids = summary.get("top_customer_user_ids", [])
-                    total_spent = summary.get('top_customer_total_spent', 0)
+                    # Additional Insights
+                    st.markdown("---")
+                    st.markdown("### 💡 Business Insights")
                     
-                    if buyer_ids:
+                    insight_col1, insight_col2, insight_col3 = st.columns(3)
+                    
+                    with insight_col1:
                         st.markdown(f"""
-                        <div class="customer-card">
-                            <div style="text-align: center; margin-bottom: 1rem;">
-                                <div style="font-size: 1.2rem; font-weight: bold; color: #ffffff; margin-bottom: 0.5rem;">🏆 Top Customer</div>
-                            </div>
-                            <div style="background: #2d2d2d; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
-                                <div style="font-size: 0.9rem; color: #cccccc; margin-bottom: 0.5rem;">Customer ID(s)</div>
-                                <div style="font-size: 1.1em; font-weight: 600; color: #ffffff; font-family: monospace;">{', '.join(map(str, buyer_ids[:2]))}{'...' if len(buyer_ids) > 2 else ''}</div>
-                            </div>
-                            <div style="background: #00D4AA; color: #000000; padding: 1.2rem; border-radius: 8px; text-align: center;">
-                                <div style="font-size: 0.9rem; margin-bottom: 0.5rem; font-weight: bold;">TOTAL LIFETIME VALUE</div>
-                                <div style="font-size: 1.8rem; font-weight: bold;">${total_spent:,.2f}</div>
-                            </div>
+                        <div class="insight-card">
+                            <div style="color: #00D4AA; font-size: 1.5rem; margin-bottom: 0.5rem;">💰</div>
+                            <div style="font-weight: bold; margin-bottom: 0.5rem; color: #ffffff;">Revenue Performance</div>
+                            <div style="color: #cccccc;">Total: ${summary.get('total_revenue', 0):,.2f}</div>
+                            <div style="color: #cccccc;">Average per user: ${summary.get('total_revenue', 0)/summary.get('unique_real_users', 1):,.2f}</div>
                         </div>
                         """, unsafe_allow_html=True)
-                    else:
-                        st.info("No buyer data available")
-                
-                # Additional Insights
-                st.markdown("---")
-                st.markdown("### 💡 Business Insights")
-                
-                insight_col1, insight_col2, insight_col3 = st.columns(3)
-                
-                with insight_col1:
-                    st.markdown(f"""
-                    <div class="insight-card">
-                        <div style="color: #00D4AA; font-size: 1.5rem; margin-bottom: 0.5rem;">💰</div>
-                        <div style="font-weight: bold; margin-bottom: 0.5rem; color: #ffffff;">Revenue Performance</div>
-                        <div style="color: #cccccc;">Total: ${summary['total_revenue']:,.2f}</div>
-                        <div style="color: #cccccc;">Average per user: ${summary['total_revenue']/summary['unique_real_users']:,.2f}</div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                
-                with insight_col2:
-                    st.markdown(f"""
-                    <div class="insight-card">
-                        <div style="color: #0099FF; font-size: 1.5rem; margin-bottom: 0.5rem;">👥</div>
-                        <div style="font-weight: bold; margin-bottom: 0.5rem; color: #ffffff;">Customer Base</div>
-                        <div style="color: #cccccc;">Unique customers: {summary['unique_real_users']:,}</div>
-                        <div style="color: #cccccc;">Top spender: ${total_spent:,.2f}</div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                
-                with insight_col3:
-                    popular_author = summary.get('most_popular_authors', ['Unknown'])[0]
-                    st.markdown(f"""
-                    <div class="insight-card">
-                        <div style="color: #FF6B6B; font-size: 1.5rem; margin-bottom: 0.5rem;">📚</div>
-                        <div style="font-weight: bold; margin-bottom: 0.5rem; color: #ffffff;">Catalog Insights</div>
-                        <div style="color: #cccccc;">Author sets: {summary['unique_author_sets']}</div>
-                        <div style="color: #cccccc;">Popular author: {popular_author}</div>
-                    </div>
-                    """, unsafe_allow_html=True)
+                    
+                    with insight_col2:
+                        st.markdown(f"""
+                        <div class="insight-card">
+                            <div style="color: #0099FF; font-size: 1.5rem; margin-bottom: 0.5rem;">👥</div>
+                            <div style="font-weight: bold; margin-bottom: 0.5rem; color: #ffffff;">Customer Base</div>
+                            <div style="color: #cccccc;">Unique customers: {summary.get('unique_real_users', 0):,}</div>
+                            <div style="color: #cccccc;">Top spender: ${total_spent:,.2f}</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    
+                    with insight_col3:
+                        popular_author = summary.get('most_popular_authors', ['Unknown'])[0]
+                        st.markdown(f"""
+                        <div class="insight-card">
+                            <div style="color: #FF6B6B; font-size: 1.5rem; margin-bottom: 0.5rem;">📚</div>
+                            <div style="font-weight: bold; margin-bottom: 0.5rem; color: #ffffff;">Catalog Insights</div>
+                            <div style="color: #cccccc;">Author sets: {summary.get('unique_author_sets', 0)}</div>
+                            <div style="color: #cccccc;">Popular author: {popular_author}</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
+                except Exception as e:
+                    st.error(f"Error in {dataset_name} analysis: {e}")
 
 def main():
-    """Main function"""
-    dashboard = DarkThemeBookstoreDashboard()
-    dashboard.render_dashboard()
+    """Main function with global error handling"""
+    try:
+        dashboard = RobustBookstoreDashboard()
+        dashboard.render_dashboard()
+    except Exception as e:
+        st.error(f"🚨 Critical error in dashboard: {e}")
+        st.info("Please check the data files and try refreshing the page.")
 
 if __name__ == "__main__":
     main()
