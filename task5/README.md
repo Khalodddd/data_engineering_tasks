@@ -117,8 +117,9 @@ Technologies:
 
 # 🖼️ **Screenshots**
 
-![Screenshot 1](brave_screenshot_localhost (3).png)
-![Screenshot 2](brave_screenshot_localhost (4).png)
+![Screenshot 1](screenshot1.png)
+![Screenshot 2](screenshot2.png)
+
 
 ---
 
@@ -161,8 +162,8 @@ npm run dev
 /
 ├── Code.gs
 ├── README.md
-├── brave_screenshot_localhost (3).png
-├── brave_screenshot_localhost (4).png
+├── screenshot1.png
+├── screenshot2.png
 ├── src/
 └── public/
 ```
