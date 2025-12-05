@@ -2,7 +2,13 @@
 
 A fully-featured, professional-grade data engineering project showcasing realistic data generation, anomaly detection, automated reporting, and a modern analytics dashboard.
 
-This README has been **expanded, renamed, and rewritten** to match a polished portfolio-ready project.
+---
+
+# 🖼️ **Screenshots**
+
+![Screenshot 1](screenshot1.png)
+![Screenshot 2](screenshot2.png)
+
 
 ---
 
@@ -24,7 +30,6 @@ This README has been **expanded, renamed, and rewritten** to match a polished po
 * Architecture
 * Google Sheets Generator
 * Data Analytics Dashboard
-* Screenshots
 * How to Install
 * How to Use
 * Folder Structure
@@ -113,15 +118,6 @@ Technologies:
 * Chart.js / Recharts
 * jsPDF
 
----
-
-# 🖼️ **Screenshots**
-
-![Screenshot 1](screenshot1.png)
-![Screenshot 2](screenshot2.png)
-
-
----
 
 # 🔌 **How to Install**
 
