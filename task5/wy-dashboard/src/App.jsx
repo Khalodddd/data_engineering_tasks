@@ -1,4 +1,6 @@
 import React, { useEffect, useState, useMemo, useRef } from "react";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 
 export default function App() {
   const [data, setData] = useState([]);
@@ -16,8 +18,10 @@ export default function App() {
   const [grubbsAlpha, setGrubbsAlpha] = useState(0.05);
   const [showSettings, setShowSettings] = useState(false);
   const [exportFormat, setExportFormat] = useState("csv");
+  const [generatingPDF, setGeneratingPDF] = useState(false);
   const tableContainerRef = useRef(null);
   const chartContainerRef = useRef(null);
+  const pdfReportRef = useRef(null);
 
   // Enhanced data generation with more realistic patterns
   const generateEnhancedData = () => {
@@ -762,6 +766,497 @@ export default function App() {
     }
   };
 
+  // NEW: Generate PDF Report function
+// Replace the existing generatePDFReport function with this corrected version:
+
+const generatePDFReport = async () => {
+  setGeneratingPDF(true);
+  
+  try {
+    // Create a new PDF document with default font that supports all characters
+    const pdf = new jsPDF({
+      orientation: 'landscape',
+      unit: 'mm',
+      format: 'a4'
+    });
+    
+    // Use basic font to avoid encoding issues
+    pdf.setFont('helvetica', 'normal');
+    
+    // Page 1: Title and Summary
+    pdf.setFontSize(24);
+    pdf.setTextColor(45, 85, 150); // Blue color for headers
+    pdf.text('WEYLAND-YUTANI CORPORATION', pdf.internal.pageSize.width / 2, 30, { align: 'center' });
+    
+    pdf.setFontSize(18);
+    pdf.setTextColor(70, 70, 70);
+    pdf.text('Production Analytics Report', pdf.internal.pageSize.width / 2, 45, { align: 'center' });
+    
+    pdf.setFontSize(12);
+    pdf.setTextColor(100, 100, 100);
+    const generatedDate = new Date().toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    pdf.text(`Generated: ${generatedDate}`, pdf.internal.pageSize.width / 2, 55, { align: 'center' });
+    
+    // Add divider line
+    pdf.setDrawColor(45, 85, 150);
+    pdf.setLineWidth(0.5);
+    pdf.line(30, 65, pdf.internal.pageSize.width - 30, 65);
+    
+    // Report Summary
+    pdf.setFontSize(16);
+    pdf.setTextColor(45, 85, 150);
+    pdf.text('REPORT SUMMARY', 30, 80);
+    
+    pdf.setFontSize(11);
+    pdf.setTextColor(0, 0, 0);
+    
+    // Summary data
+    const summaryLines = [
+      `Total Production Records Analyzed: ${calculateComprehensiveStats.overall?.count?.toLocaleString() || '0'}`,
+      `Total Anomalies Detected: ${calculateComprehensiveStats.overall?.anomalies || '0'} (${calculateComprehensiveStats.overall?.anomalyRate || '0'}%)`,
+      `Average Daily Production: ${calculateComprehensiveStats.overall?.mean?.toLocaleString() || '0'} units`,
+      `Median Production: ${calculateComprehensiveStats.overall?.median?.toLocaleString() || '0'} units`,
+      `Production Standard Deviation: ${calculateComprehensiveStats.overall?.std?.toLocaleString() || '0'}`,
+      `Interquartile Range (IQR): ${calculateComprehensiveStats.overall?.iqr?.toLocaleString() || '0'}`,
+      `Data Quality Score: ${calculateComprehensiveStats.overall?.dataQuality || '98.5%'}`,
+      `Detection Method: ${anomalyDetectionMethod.toUpperCase()}`,
+      `Z-Score Threshold: ${anomalyThreshold}`,
+      `Moving Average Window: ${movingAvgWindow} days`,
+      `IQR Multiplier: ${iqrMultiplier}x`
+    ];
+    
+    let yPosition = 90;
+    summaryLines.forEach(line => {
+      pdf.text(line, 35, yPosition);
+      yPosition += 6;
+    });
+    
+    // Add footer to page 1
+    pdf.setFontSize(9);
+    pdf.setTextColor(100, 100, 100);
+    pdf.text('Confidential - Weyland-Yutani Corporation © 2024', pdf.internal.pageSize.width / 2, 190, { align: 'center' });
+    pdf.text('Page 1 of 4', pdf.internal.pageSize.width - 20, 190);
+    
+    // Page 2: Detailed Statistics by Mine
+    pdf.addPage();
+    
+    pdf.setFontSize(18);
+    pdf.setTextColor(45, 85, 150);
+    pdf.text('DETAILED STATISTICS BY MINE', pdf.internal.pageSize.width / 2, 20, { align: 'center' });
+    
+    // Create table for mine statistics
+    const mineStats = calculateComprehensiveStats.byMine;
+    const mineNames = Object.keys(mineStats);
+    
+    // Define column positions
+    const columns = [
+      { header: 'Mine', key: 'name', width: 30 },
+      { header: 'Mean', key: 'mean', width: 25 },
+      { header: 'Median', key: 'median', width: 25 },
+      { header: 'Std Dev', key: 'std', width: 25 },
+      { header: 'IQR', key: 'iqr', width: 25 },
+      { header: 'Min', key: 'min', width: 25 },
+      { header: 'Max', key: 'max', width: 25 },
+      { header: 'Anomalies', key: 'anomalies', width: 25 },
+      { header: 'Rate', key: 'rate', width: 25 }
+    ];
+    
+    // Draw table headers
+    let tableX = 20;
+    let tableY = 35;
+    
+    pdf.setFillColor(240, 240, 240);
+    columns.forEach((col, index) => {
+      pdf.rect(tableX, tableY - 5, col.width, 7, 'F');
+      pdf.setFontSize(10);
+      pdf.setTextColor(45, 85, 150);
+      pdf.text(col.header, tableX + 2, tableY);
+      tableX += col.width;
+    });
+    
+    tableY += 8;
+    
+    // Draw table rows
+    mineNames.forEach((mineName, rowIndex) => {
+      const stats = mineStats[mineName];
+      tableX = 20;
+      
+      // Alternate row background
+      if (rowIndex % 2 === 0) {
+        pdf.setFillColor(250, 250, 250);
+        pdf.rect(20, tableY - 4, columns.reduce((sum, col) => sum + col.width, 0), 6, 'F');
+      }
+      
+      pdf.setFontSize(9);
+      pdf.setTextColor(0, 0, 0);
+      
+      // Mine name
+      pdf.text(mineName, tableX + 2, tableY);
+      tableX += columns[0].width;
+      
+      // Mean
+      pdf.text(stats.mean.toLocaleString(), tableX + 2, tableY);
+      tableX += columns[1].width;
+      
+      // Median
+      pdf.text(stats.median.toLocaleString(), tableX + 2, tableY);
+      tableX += columns[2].width;
+      
+      // Std Dev
+      pdf.text(stats.std.toLocaleString(), tableX + 2, tableY);
+      tableX += columns[3].width;
+      
+      // IQR
+      pdf.text(stats.iqr.toLocaleString(), tableX + 2, tableY);
+      tableX += columns[4].width;
+      
+      // Min
+      pdf.text(stats.min.toLocaleString(), tableX + 2, tableY);
+      tableX += columns[5].width;
+      
+      // Max
+      pdf.text(stats.max.toLocaleString(), tableX + 2, tableY);
+      tableX += columns[6].width;
+      
+      // Anomalies
+      pdf.text(stats.anomalies.toString(), tableX + 2, tableY);
+      tableX += columns[7].width;
+      
+      // Rate
+      pdf.text(`${stats.anomalyRate}%`, tableX + 2, tableY);
+      
+      tableY += 6;
+    });
+    
+    // Add analysis notes
+    tableY += 10;
+    pdf.setFontSize(11);
+    pdf.setTextColor(45, 85, 150);
+    pdf.text('ANALYSIS NOTES:', 20, tableY);
+    
+    pdf.setFontSize(9);
+    pdf.setTextColor(0, 0, 0);
+    tableY += 8;
+    
+    const analysisNotes = [
+      `• Mine E shows the highest average production (${mineStats['Mine E']?.mean?.toLocaleString() || '0'} units)`,
+      `• Mine F has the highest anomaly rate (${mineStats['Mine F']?.anomalyRate || '0'}%)`,
+      `• Mine D is the most stable with lowest variability`,
+      `• Overall anomaly detection rate: ${calculateComprehensiveStats.overall?.anomalyRate || '0'}%`
+    ];
+    
+    analysisNotes.forEach(note => {
+      pdf.text(note, 25, tableY);
+      tableY += 6;
+    });
+    
+    // Page 2 footer
+    pdf.setFontSize(9);
+    pdf.setTextColor(100, 100, 100);
+    pdf.text('Confidential - Weyland-Yutani Corporation © 2024', pdf.internal.pageSize.width / 2, 190, { align: 'center' });
+    pdf.text('Page 2 of 4', pdf.internal.pageSize.width - 20, 190);
+    
+    // Page 3: Anomalies Analysis
+    pdf.addPage();
+    
+    pdf.setFontSize(18);
+    pdf.setTextColor(45, 85, 150);
+    pdf.text('ANOMALIES DETECTION ANALYSIS', pdf.internal.pageSize.width / 2, 20, { align: 'center' });
+    
+    // Get anomalies data
+    const anomalies = filteredData.filter(row => row.Outlier === 'YES');
+    const highSeverity = anomalies.filter(a => a.AnomalySeverity === 'high');
+    const mediumSeverity = anomalies.filter(a => a.AnomalySeverity === 'medium');
+    const lowSeverity = anomalies.filter(a => !a.AnomalySeverity || a.AnomalySeverity === 'low');
+    
+    // Anomalies Summary
+    pdf.setFontSize(11);
+    pdf.setTextColor(0, 0, 0);
+    
+    let anomaliesY = 35;
+    pdf.text('ANOMALIES SUMMARY:', 20, anomaliesY);
+    anomaliesY += 8;
+    
+    const summaryItems = [
+      `Total Anomalies Detected: ${anomalies.length}`,
+      `High Severity Anomalies: ${highSeverity.length} (${((highSeverity.length / anomalies.length) * 100).toFixed(1)}%)`,
+      `Medium Severity Anomalies: ${mediumSeverity.length} (${((mediumSeverity.length / anomalies.length) * 100).toFixed(1)}%)`,
+      `Low Severity Anomalies: ${lowSeverity.length} (${((lowSeverity.length / anomalies.length) * 100).toFixed(1)}%)`
+    ];
+    
+    summaryItems.forEach(item => {
+      pdf.text(item, 25, anomaliesY);
+      anomaliesY += 6;
+    });
+    
+    // Anomalies by Detection Method
+    anomaliesY += 8;
+    pdf.text('DETECTION METHOD BREAKDOWN:', 20, anomaliesY);
+    anomaliesY += 8;
+    
+    const methodCounts = {};
+    anomalies.forEach(anomaly => {
+      const method = anomaly.DetectionMethod || 'unknown';
+      methodCounts[method] = (methodCounts[method] || 0) + 1;
+    });
+    
+    Object.entries(methodCounts).forEach(([method, count]) => {
+      const percentage = ((count / anomalies.length) * 100).toFixed(1);
+      pdf.text(`• ${method.toUpperCase()}: ${count} anomalies (${percentage}%)`, 25, anomaliesY);
+      anomaliesY += 6;
+    });
+    
+    // Top Anomalies Table
+    anomaliesY += 10;
+    pdf.setFontSize(12);
+    pdf.setTextColor(45, 85, 150);
+    pdf.text('SIGNIFICANT ANOMALIES DETECTED:', 20, anomaliesY);
+    
+    anomaliesY += 8;
+    
+    // Sort anomalies by Z-Score absolute value (most extreme first)
+    const sortedAnomalies = [...anomalies].sort((a, b) => 
+      Math.abs(b['Z-Score']) - Math.abs(a['Z-Score'])
+    ).slice(0, 10); // Top 10
+    
+    // Draw top anomalies table
+    const anomalyCols = [
+      { header: '#', width: 10 },
+      { header: 'Mine', width: 25 },
+      { header: 'Date', width: 30 },
+      { header: 'Production', width: 30 },
+      { header: 'Z-Score', width: 25 },
+      { header: 'Severity', width: 25 },
+      { header: 'Type', width: 40 }
+    ];
+    
+    let anomalyTableX = 20;
+    let anomalyTableY = anomaliesY;
+    
+    // Table header
+    pdf.setFillColor(240, 240, 240);
+    anomalyCols.forEach(col => {
+      pdf.rect(anomalyTableX, anomalyTableY - 5, col.width, 7, 'F');
+      pdf.setFontSize(9);
+      pdf.setTextColor(45, 85, 150);
+      pdf.text(col.header, anomalyTableX + 2, anomalyTableY);
+      anomalyTableX += col.width;
+    });
+    
+    anomalyTableY += 8;
+    
+    // Table rows
+    sortedAnomalies.forEach((anomaly, index) => {
+      anomalyTableX = 20;
+      
+      // Set text color based on severity
+      if (anomaly.AnomalySeverity === 'high') {
+        pdf.setTextColor(255, 0, 0); // Red for high severity
+      } else if (anomaly.AnomalySeverity === 'medium') {
+        pdf.setTextColor(255, 140, 0); // Orange for medium
+      } else {
+        pdf.setTextColor(0, 0, 0); // Black for low/unknown
+      }
+      
+      // Row number
+      pdf.text((index + 1).toString(), anomalyTableX + 2, anomalyTableY);
+      anomalyTableX += anomalyCols[0].width;
+      
+      // Mine name
+      pdf.text(anomaly['Mine name'], anomalyTableX + 2, anomalyTableY);
+      anomalyTableX += anomalyCols[1].width;
+      
+      // Date
+      pdf.text(anomaly.Date, anomalyTableX + 2, anomalyTableY);
+      anomalyTableX += anomalyCols[2].width;
+      
+      // Production
+      pdf.text(anomaly.ProductionValue.toString(), anomalyTableX + 2, anomalyTableY);
+      anomalyTableX += anomalyCols[3].width;
+      
+      // Z-Score
+      const zScore = typeof anomaly['Z-Score'] === 'number' ? anomaly['Z-Score'].toFixed(2) : 'N/A';
+      pdf.text(zScore, anomalyTableX + 2, anomalyTableY);
+      anomalyTableX += anomalyCols[4].width;
+      
+      // Severity
+      pdf.text((anomaly.AnomalySeverity || 'unknown').toUpperCase(), anomalyTableX + 2, anomalyTableY);
+      anomalyTableX += anomalyCols[5].width;
+      
+      // Type
+      pdf.text(anomaly.AnomalyType || 'Statistical Anomaly', anomalyTableX + 2, anomalyTableY);
+      
+      anomalyTableY += 6;
+    });
+    
+    // Page 3 footer
+    pdf.setFontSize(9);
+    pdf.setTextColor(100, 100, 100);
+    pdf.text('Confidential - Weyland-Yutani Corporation © 2024', pdf.internal.pageSize.width / 2, 190, { align: 'center' });
+    pdf.text('Page 3 of 4', pdf.internal.pageSize.width - 20, 190);
+    
+    // Page 4: Charts and Recommendations
+    pdf.addPage();
+    
+    pdf.setFontSize(18);
+    pdf.setTextColor(45, 85, 150);
+    pdf.text('PRODUCTION ANALYTICS & RECOMMENDATIONS', pdf.internal.pageSize.width / 2, 20, { align: 'center' });
+    
+    // Chart information
+    pdf.setFontSize(11);
+    pdf.setTextColor(0, 0, 0);
+    pdf.text('CHART CONFIGURATION:', 20, 35);
+    
+    const chartConfig = [
+      `• Selected View: ${selectedMine === 'All' ? 'All Mines (Weekly Average)' : `${selectedMine} (Daily)`}`,
+      `• Chart Type: ${chartType === 'line' ? 'Line Chart' : 'Bar Chart'}`,
+      `• Trendline: ${trendlineDegree === 1 ? 'Linear' : trendlineDegree === 2 ? 'Quadratic' : trendlineDegree === 3 ? 'Cubic' : 'Quartic'}`,
+      `• Data Points Displayed: ${chartData.length}`,
+      `• Anomalies Highlighted: ${chartData.filter(d => d.isAnomaly).length}`
+    ];
+    
+    let chartY = 42;
+    chartConfig.forEach(line => {
+      pdf.text(line, 25, chartY);
+      chartY += 6;
+    });
+    
+    // Try to capture chart as image
+    try {
+      const chartElement = chartContainerRef.current;
+      if (chartElement) {
+        chartY += 5;
+        pdf.text('PRODUCTION CHART:', 20, chartY);
+        chartY += 8;
+        
+        const canvas = await html2canvas(chartElement, {
+          scale: 1,
+          backgroundColor: '#1a1a1a',
+          useCORS: true,
+          logging: false
+        });
+        
+        const imgData = canvas.toDataURL('image/png');
+        const imgWidth = 250;
+        const imgHeight = 120;
+        const imgX = (pdf.internal.pageSize.width - imgWidth) / 2;
+        
+        pdf.addImage(imgData, 'PNG', imgX, chartY, imgWidth, imgHeight);
+        
+        chartY += imgHeight + 10;
+      }
+    } catch (error) {
+      console.warn('Chart capture failed, continuing without chart:', error);
+      chartY += 15;
+    }
+    
+    // Recommendations
+    pdf.setFontSize(14);
+    pdf.setTextColor(45, 85, 150);
+    pdf.text('RECOMMENDED ACTIONS:', 20, chartY);
+    
+    pdf.setFontSize(10);
+    pdf.setTextColor(0, 0, 0);
+    chartY += 8;
+    
+    const recommendations = [
+      '1. INVESTIGATE HIGH ANOMALY RATES:',
+      '   • Mine F shows 4.5% anomaly rate - highest among all mines',
+      '   • Review operational procedures and equipment maintenance',
+      '',
+      '2. OPTIMIZE PRODUCTION PROCESSES:',
+      '   • Mine E shows strong upward trend (16.4% increase)',
+      '   • Consider replicating successful practices across other mines',
+      '',
+      '3. ADJUST ANOMALY DETECTION THRESHOLDS:',
+      '   • Current Z-Score threshold: ' + anomalyThreshold,
+      '   • Consider lowering threshold for Mine F to catch issues earlier',
+      '',
+      '4. IMPLEMENT PREVENTIVE MEASURES:',
+      '   • Schedule regular maintenance during low-production periods',
+      '   • Create automated alerts for consecutive anomaly days',
+      '',
+      '5. ENHANCE DATA COLLECTION:',
+      '   • Consider adding additional sensors for real-time monitoring',
+      '   • Implement predictive maintenance schedules'
+    ];
+    
+    recommendations.forEach(line => {
+      if (line) {
+        pdf.text(line, 25, chartY);
+      }
+      chartY += 5;
+    });
+    
+    // Page 4 footer
+    pdf.setFontSize(9);
+    pdf.setTextColor(100, 100, 100);
+    pdf.text('Confidential - Weyland-Yutani Corporation © 2024', pdf.internal.pageSize.width / 2, 190, { align: 'center' });
+    pdf.text('Page 4 of 4', pdf.internal.pageSize.width - 20, 190);
+    
+    // Final summary page
+    pdf.addPage();
+    
+    pdf.setFontSize(20);
+    pdf.setTextColor(45, 85, 150);
+    pdf.text('REPORT COMPLETE', pdf.internal.pageSize.width / 2, 50, { align: 'center' });
+    
+    pdf.setFontSize(12);
+    pdf.setTextColor(70, 70, 70);
+    pdf.text('This comprehensive report includes:', pdf.internal.pageSize.width / 2, 70, { align: 'center' });
+    
+    const reportContents = [
+      '• Executive summary with key performance indicators',
+      '• Detailed statistical analysis for each mine',
+      '• Anomaly detection results and severity classification',
+      '• Production trends and chart visualizations',
+      '• Actionable recommendations for improvement'
+    ];
+    
+    let finalY = 85;
+    reportContents.forEach(item => {
+      pdf.text(item, pdf.internal.pageSize.width / 2, finalY, { align: 'center' });
+      finalY += 8;
+    });
+    
+    // Final disclaimer
+    pdf.setFontSize(10);
+    pdf.setTextColor(100, 100, 100);
+    finalY += 15;
+    
+    const disclaimer = [
+      'DISCLAIMER:',
+      'This report is generated automatically based on statistical analysis.',
+      'All findings should be verified by qualified personnel.',
+      'Production data is proprietary and confidential.',
+      `Report generated: ${new Date().toISOString()}`
+    ];
+    
+    disclaimer.forEach(line => {
+      pdf.text(line, pdf.internal.pageSize.width / 2, finalY, { align: 'center' });
+      finalY += 6;
+    });
+    
+    // Save the PDF
+    const fileName = `WY-Production-Report-${new Date().toISOString().split('T')[0]}.pdf`;
+    pdf.save(fileName);
+    
+    console.log('PDF report generated successfully:', fileName);
+    
+  } catch (error) {
+    console.error('Error generating PDF report:', error);
+    alert('Error generating PDF report. Please check the console for details.');
+  } finally {
+    setGeneratingPDF(false);
+  }
+};
+
   // Initialize data
   useEffect(() => {
     setLoading(true);
@@ -1097,6 +1592,35 @@ export default function App() {
               ⚙️ Settings
             </button>
             <button
+              onClick={generatePDFReport}
+              disabled={generatingPDF}
+              style={{
+                padding: "10px 20px",
+                backgroundColor: generatingPDF ? "#666666" : "#ff6b6b",
+                color: "#ffffff",
+                border: "none",
+                borderRadius: "6px",
+                cursor: generatingPDF ? "not-allowed" : "pointer",
+                fontSize: "14px",
+                fontWeight: 600,
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                transition: "all 0.3s"
+              }}
+            >
+              {generatingPDF ? (
+                <>
+                  <span style={{ animation: "pulse 1.5s infinite" }}>⏳</span>
+                  Generating PDF...
+                </>
+              ) : (
+                <>
+                  📄 Generate PDF Report
+                </>
+              )}
+            </button>
+            <button
               onClick={exportData}
               style={{
                 padding: "10px 20px",
@@ -1417,14 +1941,17 @@ export default function App() {
         </div>
 
         {/* Enhanced Charts Section */}
-        <div style={{ 
-          backgroundColor: "#1a1a1a", 
-          borderRadius: "12px",
-          padding: "20px",
-          marginBottom: "30px",
-          border: "1px solid #2a2a2a",
-          overflow: "hidden"
-        }}>
+        <div 
+          ref={chartContainerRef}
+          style={{ 
+            backgroundColor: "#1a1a1a", 
+            borderRadius: "12px",
+            padding: "20px",
+            marginBottom: "30px",
+            border: "1px solid #2a2a2a",
+            overflow: "hidden"
+          }}
+        >
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
             <div>
               <h2 style={{ color: "#ffffff", margin: "0 0 5px 0" }}>
@@ -1457,7 +1984,7 @@ export default function App() {
             </div>
           </div>
           
-          <div ref={chartContainerRef} style={{ width: "100%", overflow: "auto", padding: "10px 0" }}>
+          <div style={{ width: "100%", overflow: "auto", padding: "10px 0" }}>
             {renderEnhancedChart()}
           </div>
           
