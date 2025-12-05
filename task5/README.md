@@ -1,4 +1,4 @@
-# 🚀 **Advanced Data Generation & Analytics System**
+📌 AetherMine Data Engineering Platform — Synthetic data generator + analytics dashboard + anomaly detection.
 
 A fully-featured, professional-grade data engineering project showcasing realistic data generation, anomaly detection, automated reporting, and a modern analytics dashboard.
 
