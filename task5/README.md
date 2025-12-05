@@ -1,5 +1,8 @@
 📌 AetherMine Data Engineering Platform — Synthetic data generator + analytics dashboard + anomaly detection.
-**Live Demo:** https://gleeful-faun-825382.netlify.app/
+
+# **Live Demo:** https://gleeful-faun-825382.netlify.app/
+
+
 A fully-featured, professional-grade data engineering project showcasing realistic data generation, anomaly detection, automated reporting, and a modern analytics dashboard.
 
 ---
