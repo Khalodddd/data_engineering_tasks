@@ -168,7 +168,7 @@ npm run dev
 └── public/
 ```
 
----
+---s
 
 # 🔮 **Future Improvements**
 
