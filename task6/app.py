@@ -2,7 +2,6 @@ from flask import Flask, render_template, request, jsonify
 import psycopg2
 import os
 import sys
-import math
 
 app = Flask(__name__)
 
@@ -220,8 +219,9 @@ def init_database():
                     
                     latitude := lat;
                     longitude := lon;
-                    height_cm := ROUND(height_val, 1);
-                    weight_kg := ROUND(weight_val, 1);
+                    -- Use ROUND to 1 decimal place (ROUND(value::numeric, 1) for numeric type)
+                    height_cm := ROUND(height_val::numeric, 1);
+                    weight_kg := ROUND(weight_val::numeric, 1);
                     
                     RETURN NEXT;
                 END LOOP;
@@ -267,6 +267,10 @@ def generate_users():
         
         results = []
         for row in users:
+            # Round to 1 decimal place in Python
+            height = float(row[8]) if row[8] else 0.0
+            weight = float(row[9]) if row[9] else 0.0
+            
             results.append({
                 'id': row[0],
                 'first_name': row[1],
@@ -274,10 +278,10 @@ def generate_users():
                 'email': row[3],
                 'phone': row[4],
                 'address': row[5],
-                'latitude': float(row[6]) if row[6] else 0.0,
-                'longitude': float(row[7]) if row[7] else 0.0,
-                'height_cm': float(row[8]) if row[8] else 0.0,
-                'weight_kg': float(row[9]) if row[9] else 0.0
+                'latitude': round(float(row[6]), 6) if row[6] else 0.0,
+                'longitude': round(float(row[7]), 6) if row[7] else 0.0,
+                'height_cm': round(height, 1),
+                'weight_kg': round(weight, 1)
             })
         
         cur.close()
