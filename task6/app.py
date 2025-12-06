@@ -1,7 +1,27 @@
 from flask import Flask, render_template, request, jsonify
 import psycopg2
+import os
 
 app = Flask(__name__)
+
+# Database configuration
+def get_db_connection():
+    # For production (Netlify/Heroku)
+    database_url = os.environ.get('DATABASE_URL')
+    
+    if database_url:
+        # Heroku/Netlify style URL
+        database_url = database_url.replace('postgres://', 'postgresql://')
+        return psycopg2.connect(database_url, sslmode='require')
+    else:
+        # Local development
+        return psycopg2.connect(
+            dbname="fake_user_data",
+            user="postgres",
+            password="20221311293",
+            host="localhost",
+            port="5432"
+        )
 
 @app.route('/')
 def index():
@@ -17,24 +37,12 @@ def generate_users():
         batch_size = data.get('batch_size', 10)
         batch_index = data.get('batch_index', 0)
         
-        print(f"DEBUG: Generating - locale={locale}, seed={seed}, batch_size={batch_size}, batch_index={batch_index}")
-        
-        # Use password connection
-        conn = psycopg2.connect(
-            dbname="fake_user_data",
-            user="postgres",
-            password="20221311293",
-            host="localhost",
-            port="5432"
-        )
-        
+        conn = get_db_connection()
         cur = conn.cursor()
         
         cur.execute("SELECT * FROM generate_users_batch(%s, %s, %s, %s)", 
                    (locale, seed, batch_size, batch_index))
         users = cur.fetchall()
-        
-        print(f"DEBUG: Got {len(users)} users from database")
         
         # Convert to list of dictionaries
         results = []
@@ -64,13 +72,12 @@ def generate_users():
         })
         
     except Exception as e:
-        print(f"ERROR in generate_users: {e}")
-        import traceback
-        traceback.print_exc()
+        print(f"Error: {e}")
         return jsonify({
             'success': False,
             'error': str(e)
         }), 400
 
+# For local development
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
