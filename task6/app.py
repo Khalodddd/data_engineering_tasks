@@ -1,23 +1,83 @@
 from flask import Flask, render_template, request, jsonify
 import psycopg2
 import os
+import sys
 
 app = Flask(__name__)
 
 def get_db_connection():
     database_url = os.environ.get('DATABASE_URL')
-    if database_url:
-        if database_url.startswith('postgres://'):
-            database_url = database_url.replace('postgres://', 'postgresql://')
-        return psycopg2.connect(database_url, sslmode='require')
-    else:
-        return psycopg2.connect(
-            dbname="fake_user_data",
-            user="postgres",
-            password="20221311293",
-            host="localhost",
-            port="5432"
-        )
+    if not database_url:
+        print("ERROR: DATABASE_URL not set", file=sys.stderr)
+        raise Exception("DATABASE_URL environment variable not set")
+    
+    # Convert postgres:// to postgresql:// for psycopg2
+    if database_url.startswith('postgres://'):
+        database_url = database_url.replace('postgres://', 'postgresql://')
+    
+    try:
+        conn = psycopg2.connect(database_url, sslmode='require')
+        return conn
+    except Exception as e:
+        print(f"Database connection error: {e}", file=sys.stderr)
+        raise
+
+@app.route('/setup', methods=['GET'])
+def setup():
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # Create the function
+        cur.execute('''
+            CREATE OR REPLACE FUNCTION generate_users_batch(
+                p_locale VARCHAR,
+                p_seed INTEGER,
+                p_batch_size INTEGER,
+                p_batch_index INTEGER
+            )
+            RETURNS TABLE(
+                id BIGINT,
+                first_name VARCHAR,
+                last_name VARCHAR,
+                email VARCHAR,
+                phone VARCHAR,
+                address VARCHAR,
+                latitude FLOAT,
+                longitude FLOAT,
+                height_cm FLOAT,
+                weight_kg FLOAT
+            ) AS $$
+            DECLARE
+                i INTEGER;
+            BEGIN
+                FOR i IN 1..p_batch_size LOOP
+                    id = p_seed * 10000 + p_batch_index * 100 + i;
+                    first_name = CASE WHEN i %% 2 = 0 THEN 'John' ELSE 'Jane' END;
+                    last_name = CASE WHEN p_locale = 'USA' THEN 'Smith' ELSE 'Müller' END;
+                    email = LOWER(first_name || '.' || last_name || i::TEXT || '@example.com');
+                    phone = CASE WHEN p_locale = 'USA' 
+                                THEN '+1 (555) 123-' || LPAD((i %% 10000)::TEXT, 4, '0')
+                                ELSE '+49 89 123' || LPAD((i %% 10000)::TEXT, 4, '0') END;
+                    address = CASE WHEN p_locale = 'USA' 
+                                  THEN '123 Main St, New York, USA'
+                                  ELSE 'Hauptstraße 1, Berlin, Germany' END;
+                    latitude = 40.0 + (i %% 100) * 0.1;
+                    longitude = -70.0 + (i %% 100) * 0.1;
+                    height_cm = 170.0 + (i %% 30);
+                    weight_kg = 70.0 + (i %% 40) * 0.5;
+                    RETURN NEXT;
+                END LOOP;
+            END;
+            $$ LANGUAGE plpgsql;
+        ''')
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+        return jsonify({'success': True, 'message': 'Function created!'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/')
 def index():
@@ -30,12 +90,14 @@ def generate_users():
         data = request.get_json()
         locale = data.get('locale', 'USA')
         seed = data.get('seed', 12345)
-        batch_size = data.get('batch_size', 10)
+        batch_size = min(data.get('batch_size', 10), 50)
         batch_index = data.get('batch_index', 0)
         
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("SELECT * FROM generate_users_batch(%s, %s, %s, %s)", (locale, seed, batch_size, batch_index))
+        
+        cur.execute("SELECT * FROM generate_users_batch(%s, %s, %s, %s)", 
+                   (locale, seed, batch_size, batch_index))
         users = cur.fetchall()
         
         results = []
@@ -51,8 +113,11 @@ def generate_users():
         conn.close()
         
         return jsonify({
-            'success': True, 'users': results, 'batch_index': batch_index,
-            'seed': seed, 'total_generated': (batch_index + 1) * batch_size
+            'success': True,
+            'users': results,
+            'batch_index': batch_index,
+            'seed': seed,
+            'total_generated': (batch_index + 1) * batch_size
         })
         
     except Exception as e:
