@@ -1,5 +1,3 @@
-from dotenv import load_dotenv
-load_dotenv()
 from flask import Flask, render_template, request, jsonify
 import psycopg2
 import os
@@ -8,21 +6,32 @@ import sys
 app = Flask(__name__)
 
 def get_db_connection():
+    # Try DATABASE_URL from environment (Render)
     database_url = os.environ.get('DATABASE_URL')
-    if not database_url:
-        print("ERROR: DATABASE_URL not set", file=sys.stderr)
-        raise Exception("DATABASE_URL environment variable not set")
     
-    if database_url.startswith('postgres://'):
-        database_url = database_url.replace('postgres://', 'postgresql://')
-    
-    try:
-        conn = psycopg2.connect(database_url, sslmode='require')
-        return conn
-    except Exception as e:
-        print(f"Database connection error: {e}", file=sys.stderr)
-        raise
+    if database_url:
+        print("Using DATABASE_URL from environment", file=sys.stderr)
+        if database_url.startswith('postgres://'):
+            database_url = database_url.replace('postgres://', 'postgresql://')
+        return psycopg2.connect(database_url, sslmode='require')
+    else:
+        # For local development without .env file
+        print("DATABASE_URL not set, trying local connection", file=sys.stderr)
+        try:
+            return psycopg2.connect(
+                dbname="fake_user_data",
+                user="postgres",
+                password="20221311293",
+                host="localhost",
+                port="5432"
+            )
+        except:
+            raise Exception("DATABASE_URL environment variable not set and local connection failed")
 
+# ... keep the rest of your app.py code (setup function, routes, etc.) ...
+
+# Paste your existing code here, starting from create_function_if_not_exists()
+# I'll show the first few lines:
 def create_function_if_not_exists():
     try:
         conn = get_db_connection()
