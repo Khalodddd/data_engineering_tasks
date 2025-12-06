@@ -1,21 +1,26 @@
-# Task 6: Fake User Data Generator API
+# Task 6: Fake User Data Generator
+## Khaled Soliman | khaledsoliman159@gmail.com
 
-A Flask web application for generating realistic fake user data with multi-locale support.
+### Requirements Met:
+✅ Web app with Flask
+✅ PostgreSQL stored procedures for data generation
+✅ USA and Germany locales  
+✅ Seed-based reproducibility
+✅ Batch generation (10 at a time)
+✅ Next batch functionality
+✅ Single names table with locale field
+✅ 30,000+ names support
+✅ Full names, addresses, coordinates, height/weight, phones, emails
+✅ Uniform sphere coordinates
+✅ Normal distribution for physical attributes
+✅ Modular SQL functions
 
-## Features
-- Web interface with locale selection (USA/Germany)
-- PostgreSQL database integration
-- REST API endpoint
-- Responsive design
+### How to run:
+1. pip install -r requirements.txt
+2. Setup PostgreSQL (see SETUP.md)
+3. python app.py
+4. Open http://localhost:5000
 
-## Setup
-1. `pip install -r requirements.txt`
-2. Setup PostgreSQL database
-3. `python app.py`
-4. Visit: http://localhost:5000
-
-## Files
-- `app.py` - Main Flask application
-- `templates/index.html` - Web interface
-- `sql_scripts/` - Database setup
-- `requirements.txt` - Dependencies
+### API:
+POST /generate
+{"locale": "USA"|"Germany", "seed": number, "batch_size": number, "batch_index": number}

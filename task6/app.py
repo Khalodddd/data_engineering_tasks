@@ -1,48 +1,56 @@
 from flask import Flask, render_template, request, jsonify
 import psycopg2
-from psycopg2.extras import RealDictCursor
 
 app = Flask(__name__)
 
-DB_CONFIG = {
-    'dbname': 'fake_user_data',
-    'user': 'fake_user',
-    'password': '20221311293',
-    'host': 'localhost',
-    'port': '5432'
-}
-
-def get_db_connection():
-    return psycopg2.connect(**DB_CONFIG)
-
 @app.route('/')
 def index():
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT locale_id, locale_name FROM locales ORDER BY locale_id")
-    locales = cur.fetchall()
-    cur.close()
-    conn.close()
+    locales = ['USA', 'Germany']
     return render_template('index.html', locales=locales)
 
 @app.route('/generate', methods=['POST'])
 def generate_users():
     try:
-        data = request.json
-        locale = data.get('locale', 'en_US')
-        seed = int(data.get('seed', 12345))
-        batch_index = int(data.get('batch_index', 0))
-        batch_size = int(data.get('batch_size', 10))
+        data = request.get_json()
+        locale = data.get('locale', 'USA')
+        seed = data.get('seed', 12345)
+        batch_size = data.get('batch_size', 10)
+        batch_index = data.get('batch_index', 0)
         
-        conn = get_db_connection()
-        cur = conn.cursor(cursor_factory=RealDictCursor)
+        print(f"DEBUG: Generating - locale={locale}, seed={seed}, batch_size={batch_size}, batch_index={batch_index}")
+        
+        # Use password connection
+        conn = psycopg2.connect(
+            dbname="fake_user_data",
+            user="postgres",
+            password="20221311293",
+            host="localhost",
+            port="5432"
+        )
+        
+        cur = conn.cursor()
         
         cur.execute("SELECT * FROM generate_users_batch(%s, %s, %s, %s)", 
-                   (locale, seed, batch_index, batch_size))
+                   (locale, seed, batch_size, batch_index))
+        users = cur.fetchall()
         
+        print(f"DEBUG: Got {len(users)} users from database")
+        
+        # Convert to list of dictionaries
         results = []
-        for record in cur.fetchall():
-            results.append(dict(record))
+        for row in users:
+            results.append({
+                'id': row[0],
+                'first_name': row[1],
+                'last_name': row[2],
+                'email': row[3],
+                'phone': row[4],
+                'address': row[5],
+                'latitude': row[6],
+                'longitude': row[7],
+                'height_cm': row[8],
+                'weight_kg': row[9]
+            })
         
         cur.close()
         conn.close()
@@ -56,6 +64,9 @@ def generate_users():
         })
         
     except Exception as e:
+        print(f"ERROR in generate_users: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({
             'success': False,
             'error': str(e)
