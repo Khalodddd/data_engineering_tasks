@@ -28,66 +28,59 @@ def get_db_connection():
         except:
             raise Exception("DATABASE_URL environment variable not set and local connection failed")
 
-# ... keep the rest of your app.py code (setup function, routes, etc.) ...
-
-# Paste your existing code here, starting from create_function_if_not_exists()
-# I'll show the first few lines:
 def create_function_if_not_exists():
     try:
         conn = get_db_connection()
         cur = conn.cursor()
         
-        cur.execute("SELECT EXISTS(SELECT 1 FROM pg_proc WHERE proname = 'generate_users_batch');")
-        function_exists = cur.fetchone()[0]
+        # First drop the function if it exists
+        cur.execute("DROP FUNCTION IF EXISTS generate_users_batch(VARCHAR, INTEGER, INTEGER, INTEGER);")
         
-        if not function_exists:
-            print("Creating generate_users_batch function...", file=sys.stderr)
-            cur.execute('''
-                CREATE OR REPLACE FUNCTION generate_users_batch(
-                    p_locale VARCHAR,
-                    p_seed INTEGER,
-                    p_batch_size INTEGER,
-                    p_batch_index INTEGER
-                )
-                RETURNS TABLE(
-                    id BIGINT,
-                    first_name VARCHAR,
-                    last_name VARCHAR,
-                    email VARCHAR,
-                    phone VARCHAR,
-                    address VARCHAR,
-                    latitude FLOAT,
-                    longitude FLOAT,
-                    height_cm FLOAT,
-                    weight_kg FLOAT
-                ) AS $$
-                DECLARE
-                    i INTEGER;
-                BEGIN
-                    FOR i IN 1..p_batch_size LOOP
-                        id = p_seed * 10000 + p_batch_index * 100 + i;
-                        first_name = CASE WHEN i % 2 = 0 THEN 'John' ELSE 'Jane' END;
-                        last_name = CASE WHEN p_locale = 'USA' THEN 'Smith' ELSE 'Müller' END;
-                        email = LOWER(first_name || '.' || last_name || i::TEXT || '@example.com');
-                        phone = CASE WHEN p_locale = 'USA' 
-                                    THEN '+1 (555) 123-' || LPAD((i % 10000)::TEXT, 4, '0')
-                                    ELSE '+49 89 123' || LPAD((i % 10000)::TEXT, 4, '0') END;
-                        address = CASE WHEN p_locale = 'USA' 
-                                      THEN '123 Main St, New York, USA'
-                                      ELSE 'Hauptstraße 1, Berlin, Germany' END;
-                        latitude = 40.0 + (i % 100) * 0.1;
-                        longitude = -70.0 + (i % 100) * 0.1;
-                        height_cm = 170.0 + (i % 30);
-                        weight_kg = 70.0 + (i % 40) * 0.5;
-                        RETURN NEXT;
-                    END LOOP;
-                END;
-                $$ LANGUAGE plpgsql;
-            ''')
-            conn.commit()
-            print("Function created!", file=sys.stderr)
-        else:
-            print("Function exists", file=sys.stderr)
+        print("Creating generate_users_batch function...", file=sys.stderr)
+        cur.execute('''
+            CREATE OR REPLACE FUNCTION generate_users_batch(
+                p_locale VARCHAR,
+                p_seed INTEGER,
+                p_batch_size INTEGER,
+                p_batch_index INTEGER
+            )
+            RETURNS TABLE(
+                id BIGINT,
+                first_name VARCHAR,
+                last_name VARCHAR,
+                email VARCHAR,
+                phone VARCHAR,
+                address VARCHAR,
+                latitude FLOAT,
+                longitude FLOAT,
+                height_cm FLOAT,
+                weight_kg FLOAT
+            ) AS $$
+            DECLARE
+                i INTEGER;
+            BEGIN
+                FOR i IN 1..p_batch_size LOOP
+                    id = p_seed * 10000 + p_batch_index * 100 + i;
+                    first_name = CASE WHEN i % 2 = 0 THEN 'John' ELSE 'Jane' END;
+                    last_name = CASE WHEN p_locale = 'USA' THEN 'Smith' ELSE 'Müller' END;
+                    email = LOWER(first_name || '.' || last_name || i::TEXT || '@example.com');
+                    phone = CASE WHEN p_locale = 'USA' 
+                                THEN '+1 (555) 123-' || LPAD((i % 10000)::TEXT, 4, '0')
+                                ELSE '+49 89 123' || LPAD((i % 10000)::TEXT, 4, '0') END;
+                    address = CASE WHEN p_locale = 'USA' 
+                                  THEN '123 Main St, New York, USA'
+                                  ELSE 'Hauptstraße 1, Berlin, Germany' END;
+                    latitude = 40.0 + (i % 100) * 0.1;
+                    longitude = -70.0 + (i % 100) * 0.1;
+                    height_cm = 170.0 + (i % 30);
+                    weight_kg = 70.0 + (i % 40) * 0.5;
+                    RETURN NEXT;
+                END LOOP;
+            END;
+            $$ LANGUAGE plpgsql;
+        ''')
+        conn.commit()
+        print("Function created successfully!", file=sys.stderr)
         
         cur.close()
         conn.close()
