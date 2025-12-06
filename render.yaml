@@ -1,10 +1,7 @@
 services:
   - type: web
     name: fake-user-generator
-    runtime: python
-    repo: https://github.com/Khalodddd/data_engineering_tasks
-    branch: main
-    rootDir: task6  # <-- THIS tells Render where your app is
+    env: python
     buildCommand: cd task6 && pip install -r requirements.txt
     startCommand: cd task6 && gunicorn app:app
     envVars:
@@ -13,10 +10,7 @@ services:
           name: fake-user-db
           property: connectionString
     plan: free
-    autoDeploy: true
 
 databases:
   - name: fake-user-db
     plan: free
-    databaseName: fake_user_data
-    user: fake_user
