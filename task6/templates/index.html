@@ -28,8 +28,8 @@
             <div class="control-group">
                 <label for="locale">Locale:</label>
                 <select id="locale">
-                    <option value="USA">USA</option>
-                    <option value="Germany">Germany</option>
+                    <option value="en_US">USA</option>
+                    <option value="de_DE">Germany</option>
                 </select>
             </div>
             
@@ -80,13 +80,13 @@
     <script>
         let currentBatchIndex = 0;
         let currentSeed = 12345;
-        let currentLocale = 'USA';
+        let currentLocale = 'en_US';  // Changed from 'USA' to 'en_US'
         let currentBatchSize = 10;
         
         function generate() {
             currentBatchIndex = 0;
             currentSeed = parseInt(document.getElementById('seed').value);
-            currentLocale = document.getElementById('locale').value;
+            currentLocale = document.getElementById('locale').value;  // Now gets 'en_US' or 'de_DE'
             currentBatchSize = parseInt(document.getElementById('batchSize').value);
             
             fetchUsers();
@@ -100,7 +100,7 @@
         function resetGenerator() {
             currentBatchIndex = 0;
             currentSeed = 12345;
-            currentLocale = 'USA';
+            currentLocale = 'en_US';  // Changed from 'USA' to 'en_US'
             currentBatchSize = 10;
             
             document.getElementById('seed').value = currentSeed;
