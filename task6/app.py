@@ -307,6 +307,126 @@ def generate_users():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 400
 
+@app.route('/benchmark_test')
+def benchmark_test_page():
+    """HTML page for running benchmarks"""
+    return '''
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Benchmark Test - Fake User Generator</title>
+        <style>
+            body { font-family: Arial; margin: 40px; }
+            .container { max-width: 800px; margin: 0 auto; }
+            .controls { background: #f5f5f5; padding: 20px; border-radius: 5px; margin-bottom: 20px; }
+            button { padding: 10px 20px; background: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 5px; }
+            button:hover { background: #138496; }
+            .loading { color: #007bff; margin: 10px 0; }
+            .error { color: #dc3545; background: #f8d7da; padding: 10px; border-radius: 4px; margin: 10px 0; }
+            table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+            th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+            th { background: #007bff; color: white; }
+            .results { margin-top: 20px; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>⚡ Benchmark Test</h1>
+            <p>Test the performance of your fake user generator across different batch sizes.</p>
+            
+            <div class="controls">
+                <div style="margin-bottom: 15px;">
+                    <label>Locale: </label>
+                    <select id="locale">
+                        <option value="en_US">USA</option>
+                        <option value="de_DE">Germany</option>
+                    </select>
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label>Seed Value: </label>
+                    <input type="number" id="seed" value="12345">
+                </div>
+                
+                <button onclick="runBenchmark()">Run Benchmark Test</button>
+                <button onclick="window.location.href='/'">Back to Main</button>
+                <button onclick="window.open('/docs', '_blank')">Documentation</button>
+            </div>
+            
+            <div class="loading" id="loading" style="display:none;">Running benchmark tests... (This may take 15-20 seconds)</div>
+            <div class="error" id="error" style="display:none;"></div>
+            
+            <div class="results" id="results"></div>
+        </div>
+
+        <script>
+            function runBenchmark() {
+                const loading = document.getElementById('loading');
+                const error = document.getElementById('error');
+                const results = document.getElementById('results');
+                
+                loading.style.display = 'block';
+                error.style.display = 'none';
+                results.innerHTML = '';
+                
+                fetch('/benchmark', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        locale: document.getElementById('locale').value,
+                        seed: parseInt(document.getElementById('seed').value)
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    loading.style.display = 'none';
+                    
+                    if (data.success) {
+                        displayResults(data);
+                    } else {
+                        showError(data.error);
+                    }
+                })
+                .catch(err => {
+                    loading.style.display = 'none';
+                    showError('Error: ' + err.message);
+                });
+            }
+            
+            function displayResults(data) {
+                let html = '<h2>Benchmark Results</h2>';
+                
+                html += '<table><tr><th>Batch Size</th><th>Avg Time (ms)</th><th>Users/Second</th></tr>';
+                
+                data.benchmark_results.forEach(result => {
+                    html += `<tr>
+                        <td>${result.batch_size}</td>
+                        <td>${result.avg_time_ms}</td>
+                        <td><strong>${result.users_per_second}</strong></td>
+                    </tr>`;
+                });
+                
+                html += '</table>';
+                
+                html += `<h3>Summary</h3>
+                        <p><strong>Overall Performance:</strong> ${data.summary.overall_users_per_second} users/second</p>
+                        <p><strong>Fastest Batch Size:</strong> ${data.summary.fastest_batch_size} users</p>
+                        <p><strong>Slowest Batch Size:</strong> ${data.summary.slowest_batch_size} users</p>
+                        <p><strong>Total Users Tested:</strong> ${data.summary.total_tested}</p>
+                        <p><strong>Total Time:</strong> ${data.summary.total_time_ms} ms</p>`;
+                
+                document.getElementById('results').innerHTML = html;
+            }
+            
+            function showError(message) {
+                document.getElementById('error').textContent = 'Error: ' + message;
+                document.getElementById('error').style.display = 'block';
+            }
+        </script>
+    </body>
+    </html>
+    '''
+
 @app.route('/benchmark', methods=['POST'])
 def run_benchmark():
     """Run comprehensive benchmark tests"""
@@ -355,6 +475,14 @@ def run_benchmark():
         # Calculate overall performance
         overall_users_per_second = (total_users / total_time * 1000) if total_time > 0 else 0
         
+        # Find fastest and slowest
+        if results:
+            fastest = max(results, key=lambda x: x['users_per_second'])
+            slowest = min(results, key=lambda x: x['users_per_second'])
+        else:
+            fastest = {'batch_size': 0, 'users_per_second': 0}
+            slowest = {'batch_size': 0, 'users_per_second': 0}
+        
         return jsonify({
             'success': True,
             'benchmark_results': results,
@@ -362,8 +490,8 @@ def run_benchmark():
                 'total_tested': total_users,
                 'total_time_ms': round(total_time, 2),
                 'overall_users_per_second': round(overall_users_per_second, 2),
-                'fastest_batch_size': max(results, key=lambda x: x['users_per_second'])['batch_size'],
-                'slowest_batch_size': min(results, key=lambda x: x['users_per_second'])['batch_size']
+                'fastest_batch_size': fastest['batch_size'],
+                'slowest_batch_size': slowest['batch_size']
             },
             'test_parameters': {
                 'locale': locale,
@@ -511,7 +639,7 @@ def documentation():
         <h2>🔗 Links</h2>
         <ul>
             <li><a href="/">Main Application</a></li>
-            <li><a href="/benchmark">Run Benchmark</a></li>
+            <li><a href="/benchmark_test">Run Benchmark</a></li>
             <li><a href="https://github.com/Khalodddd/data_engineering_tasks">GitHub Repository</a></li>
         </ul>
         

@@ -9,7 +9,7 @@
         .control-group { margin-bottom: 15px; }
         label { display: inline-block; width: 120px; }
         select, input { padding: 8px; width: 200px; }
-        button { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 5px; }
         button:hover { background: #0056b3; }
         .stats { margin: 20px 0; padding: 15px; background: #e9ecef; border-radius: 5px; }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
@@ -18,6 +18,8 @@
         tr:hover { background: #f5f5f5; }
         .loading { display: none; color: #007bff; margin: 20px 0; }
         .error { color: #dc3545; background: #f8d7da; padding: 10px; border-radius: 4px; margin: 10px 0; display: none; }
+        .nav-buttons { margin-top: 15px; }
+        .nav-buttons a { text-decoration: none; }
     </style>
 </head>
 <body>
@@ -43,9 +45,21 @@
                 <input type="number" id="batchSize" value="10" min="1" max="100">
             </div>
             
+            <!-- Main Action Buttons -->
             <button onclick="generate()">Generate</button>
             <button onclick="nextBatch()">Next Batch</button>
             <button onclick="resetGenerator()">Reset</button>
+            
+            <!-- Navigation Buttons -->
+            <div class="nav-buttons">
+                <a href="/docs" target="_blank">
+                    <button style="background:#28a745;">📚 Documentation</button>
+                </a>
+                <a href="/benchmark_test" target="_blank">
+                    <button style="background:#17a2b8;">⚡ Run Benchmark</button>
+                </a>
+                <button style="background:#6c757d;" onclick="showPerformanceInfo()">📊 Performance Info</button>
+            </div>
         </div>
         
         <div class="stats">
@@ -80,13 +94,13 @@
     <script>
         let currentBatchIndex = 0;
         let currentSeed = 12345;
-        let currentLocale = 'en_US';  // Changed from 'USA' to 'en_US'
+        let currentLocale = 'en_US';
         let currentBatchSize = 10;
         
         function generate() {
             currentBatchIndex = 0;
             currentSeed = parseInt(document.getElementById('seed').value);
-            currentLocale = document.getElementById('locale').value;  // Now gets 'en_US' or 'de_DE'
+            currentLocale = document.getElementById('locale').value;
             currentBatchSize = parseInt(document.getElementById('batchSize').value);
             
             fetchUsers();
@@ -100,7 +114,7 @@
         function resetGenerator() {
             currentBatchIndex = 0;
             currentSeed = 12345;
-            currentLocale = 'en_US';  // Changed from 'USA' to 'en_US'
+            currentLocale = 'en_US';
             currentBatchSize = 10;
             
             document.getElementById('seed').value = currentSeed;
@@ -137,6 +151,8 @@
                 if (data.success) {
                     displayUsers(data.users);
                     updateStats(data);
+                    // Show performance info in console
+                    console.log('Performance:', data.performance);
                 } else {
                     showError(data.error);
                 }
@@ -184,6 +200,15 @@
             const errorContainer = document.getElementById('errorContainer');
             errorContainer.textContent = 'Error: ' + message;
             errorContainer.style.display = 'block';
+        }
+        
+        function showPerformanceInfo() {
+            alert('Performance metrics are automatically calculated with each generation.\n\n' +
+                  'Check your browser console (F12 → Console) to see detailed performance data including:\n' +
+                  '• Generation time (milliseconds)\n' +
+                  '• Users per second\n' +
+                  '• Batch size\n\n' +
+                  'For comprehensive benchmark tests, click the "⚡ Run Benchmark" button.');
         }
         
         // Initialize
