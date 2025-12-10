@@ -7,19 +7,36 @@ from datetime import datetime
 
 app = Flask(__name__)
 
-# SECURE: No password in code - only from environment
 def get_db_connection():
+    """Connect to PostgreSQL with SSL fix for Render"""
     database_url = os.environ.get('DATABASE_URL')
+    
     if database_url:
+        print(f"Connecting to: {database_url[:50]}...", file=sys.stderr)
+        
+        # Fix postgres:// to postgresql://
         if database_url.startswith('postgres://'):
             database_url = database_url.replace('postgres://', 'postgresql://')
-        return psycopg2.connect(database_url, sslmode='require')
+        
+        try:
+            # Try with SSL first
+            return psycopg2.connect(database_url, sslmode='require')
+        except Exception as e:
+            print(f"SSL connection failed: {e}", file=sys.stderr)
+            print("Trying without SSL...", file=sys.stderr)
+            # Fallback without SSL
+            try:
+                return psycopg2.connect(database_url, sslmode='disable')
+            except Exception as e2:
+                print(f"Connection failed: {e2}", file=sys.stderr)
+                raise
     else:
-        # Local development - requires environment variables
+        # Local development
+        print("Using local PostgreSQL...", file=sys.stderr)
         return psycopg2.connect(
             dbname=os.environ.get('DB_NAME', 'fake_user_data'),
             user=os.environ.get('DB_USER', 'postgres'),
-            password=os.environ.get('DB_PASSWORD', ''),  # EMPTY - must be set in env
+            password=os.environ.get('DB_PASSWORD', ''),
             host=os.environ.get('DB_HOST', 'localhost'),
             port=os.environ.get('DB_PORT', '5432')
         )
@@ -305,5 +322,5 @@ def documentation():
     '''
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
+    port = int(os.environ.get('PORT', 10000))  # Changed to 10000 for Render
     app.run(host='0.0.0.0', port=port)
