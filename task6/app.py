@@ -7,7 +7,7 @@ from datetime import datetime
 
 app = Flask(__name__)
 
-# SECURE: Password from environment variable
+# SECURE: No password in code - only from environment
 def get_db_connection():
     database_url = os.environ.get('DATABASE_URL')
     if database_url:
@@ -15,11 +15,11 @@ def get_db_connection():
             database_url = database_url.replace('postgres://', 'postgresql://')
         return psycopg2.connect(database_url, sslmode='require')
     else:
-        # Local development - SET THESE IN ENVIRONMENT VARIABLES!
+        # Local development - requires environment variables
         return psycopg2.connect(
             dbname=os.environ.get('DB_NAME', 'fake_user_data'),
             user=os.environ.get('DB_USER', 'postgres'),
-            password=os.environ.get('DB_PASSWORD', '20221311293'),  # Change this!
+            password=os.environ.get('DB_PASSWORD', ''),  # EMPTY - must be set in env
             host=os.environ.get('DB_HOST', 'localhost'),
             port=os.environ.get('DB_PORT', '5432')
         )
